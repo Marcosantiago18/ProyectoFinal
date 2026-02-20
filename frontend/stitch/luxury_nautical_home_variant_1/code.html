@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Luxury Nautical Home Variant 1</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Icons -->
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0f49bd",
+                        "primary-dark": "#0a358a",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "navy-deep": "#050b14",
+                        "gold-accent": "#D4AF37",
+                        "gold-light": "#F3E5AB",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #101622;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1f2937; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #0f49bd; 
+        }
+        
+        .glass-nav {
+            background: rgba(5, 11, 20, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .glass-card {
+            background: rgba(16, 22, 34, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .gold-border-glow:focus-within {
+            border-color: #D4AF37;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-100 font-display min-h-screen flex flex-col">
+<!-- Hero Section with Video Background -->
+<div class="relative w-full h-screen overflow-hidden">
+<!-- Video Background (Simulated with Image for output, in real prod use <video>) -->
+<div class="absolute inset-0 w-full h-full">
+<!-- Note: In a real scenario, this would be a <video> tag. Using an image placeholder as per instructions to avoid loading heavy assets or breaking without video source -->
+<img alt="Luxury yacht cruising on dark blue ocean at sunset" class="object-cover w-full h-full brightness-50" data-alt="Luxury yacht cruising on dark blue ocean at sunset" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3IRD7Lt2YOdqwi8ihq4jZHPovewTZEnx6fjoUq0pYQq7WaK7IS3d2zYpb-X4l0qR0X09_23IGYw0TOzM3IdRJBnBwPfMjZbuJWHO64kR_fCNzvrrGtH379mkadFYTo85OW2I5KEpkrkY3M5ENWF0JcZR98skUB0_iqnVhAVpta5ro7DTa9TLWXDyyZQb-MWx3mClOy71IXYJsI_lj3fnfpwqm1CyeThfrEyBbqAGfJpVsz74KJy5XVCwnFROvyD6P3oWtdnRsMZc"/>
+<!-- Overlay gradient for text readability -->
+<div class="absolute inset-0 bg-gradient-to-b from-navy-deep/60 via-navy-deep/20 to-background-dark"></div>
+</div>
+<!-- Glassmorphism Navigation -->
+<nav class="fixed top-0 w-full z-50 glass-nav transition-all duration-300">
+<div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+<!-- Logo -->
+<a class="flex items-center gap-2 group" href="#">
+<span class="material-icons text-gold-accent text-3xl">sailing</span>
+<span class="text-xl font-bold tracking-widest text-white uppercase group-hover:text-gold-accent transition-colors">Nautica</span>
+</a>
+<!-- Desktop Menu -->
+<div class="hidden md:flex items-center space-x-8">
+<a class="text-sm font-medium text-slate-200 hover:text-white hover:border-b hover:border-gold-accent pb-1 transition-all" href="#">Yachts</a>
+<a class="text-sm font-medium text-slate-200 hover:text-white hover:border-b hover:border-gold-accent pb-1 transition-all" href="#">Jet Skis</a>
+<a class="text-sm font-medium text-slate-200 hover:text-white hover:border-b hover:border-gold-accent pb-1 transition-all" href="#">Experiences</a>
+</div>
+<!-- Right Actions -->
+<div class="flex items-center gap-4">
+<a class="hidden md:block text-sm font-medium text-gold-accent hover:text-white transition-colors" href="#">Owner Login</a>
+<button class="bg-primary/20 hover:bg-primary/40 border border-primary text-white px-5 py-2 rounded-full text-sm font-medium transition-all backdrop-blur-sm">
+                        Sign Up
+                    </button>
+<!-- Mobile Menu Button -->
+<button class="md:hidden text-white">
+<span class="material-icons">menu</span>
+</button>
+</div>
+</div>
+</nav>
+<!-- Hero Content & Search Widget -->
+<div class="relative z-20 flex flex-col justify-center items-center h-full px-4 text-center">
+<span class="text-gold-accent uppercase tracking-[0.2em] text-sm mb-4 font-semibold animate-fade-in-up">The Ocean Awaits</span>
+<h1 class="text-5xl md:text-7xl font-light text-white mb-12 tracking-tight">
+                Experience Absolute <span class="font-serif italic text-gold-light">Freedom</span>
+</h1>
+<!-- Search Widget -->
+<div class="w-full max-w-5xl bg-navy-deep/60 backdrop-blur-md border border-white/20 rounded-full p-2 gold-border-glow transition-all duration-300">
+<form class="flex flex-col md:flex-row items-center w-full">
+<!-- Location -->
+<div class="relative flex-1 w-full px-6 py-3 border-b md:border-b-0 md:border-r border-white/10 group">
+<label class="block text-xs uppercase text-slate-400 font-semibold mb-1 ml-8">Location</label>
+<div class="flex items-center">
+<span class="material-icons text-gold-accent mr-3">place</span>
+<input class="w-full bg-transparent border-none text-white placeholder-slate-300 focus:ring-0 p-0 text-lg font-medium" placeholder="Where to?" type="text"/>
+</div>
+</div>
+<!-- Date -->
+<div class="relative flex-1 w-full px-6 py-3 border-b md:border-b-0 md:border-r border-white/10">
+<label class="block text-xs uppercase text-slate-400 font-semibold mb-1 ml-8">Dates</label>
+<div class="flex items-center">
+<span class="material-icons text-gold-accent mr-3">calendar_today</span>
+<input class="w-full bg-transparent border-none text-white placeholder-slate-300 focus:ring-0 p-0 text-lg font-medium" placeholder="Select Dates" type="text"/>
+</div>
+</div>
+<!-- Boat Type -->
+<div class="relative flex-1 w-full px-6 py-3">
+<label class="block text-xs uppercase text-slate-400 font-semibold mb-1 ml-8">Vessel</label>
+<div class="flex items-center">
+<span class="material-icons text-gold-accent mr-3">directions_boat</span>
+<select class="w-full bg-transparent border-none text-white focus:ring-0 p-0 text-lg font-medium [&amp;&gt;option]:text-slate-900 cursor-pointer">
+<option class="bg-background-dark text-white" value="">Any Type</option>
+<option class="bg-background-dark text-white" value="yacht">Super Yacht</option>
+<option class="bg-background-dark text-white" value="catamaran">Catamaran</option>
+<option class="bg-background-dark text-white" value="sailboat">Sailboat</option>
+</select>
+</div>
+</div>
+<!-- Submit Button -->
+<div class="p-2 w-full md:w-auto">
+<button class="w-full md:w-16 md:h-16 rounded-full bg-primary hover:bg-primary-dark text-white flex items-center justify-center shadow-lg shadow-primary/30 transition-all hover:scale-105" type="button">
+<span class="material-icons text-2xl">search</span>
+</button>
+</div>
+</form>
+</div>
+<!-- Quick links below search -->
+<div class="mt-8 flex gap-4 text-sm text-slate-300">
+<span>Popular:</span>
+<a class="hover:text-gold-accent transition-colors underline decoration-dotted underline-offset-4" href="#">French Riviera</a>
+<a class="hover:text-gold-accent transition-colors underline decoration-dotted underline-offset-4" href="#">Mykonos</a>
+<a class="hover:text-gold-accent transition-colors underline decoration-dotted underline-offset-4" href="#">Caribbean</a>
+</div>
+</div>
+<!-- Scroll Indicator -->
+<div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-white animate-bounce">
+<span class="material-icons">keyboard_arrow_down</span>
+</div>
+</div>
+<!-- Featured Fleet Section -->
+<section class="py-20 px-6 relative bg-background-light dark:bg-background-dark">
+<div class="max-w-7xl mx-auto">
+<div class="flex flex-col md:flex-row justify-between items-end mb-12">
+<div>
+<h2 class="text-gold-accent font-semibold tracking-widest text-sm uppercase mb-2">Exclusive Selection</h2>
+<h3 class="text-3xl md:text-4xl font-light text-slate-900 dark:text-white">Featured Fleet</h3>
+</div>
+<a class="group flex items-center gap-2 text-primary hover:text-gold-accent transition-colors mt-4 md:mt-0" href="#">
+<span class="font-medium">View all vessels</span>
+<span class="material-icons text-sm transform group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</a>
+</div>
+<!-- Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Card 1 -->
+<div class="group relative rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-xl hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300">
+<div class="relative h-64 overflow-hidden">
+<img alt="Sleek white yacht anchored in turquoise water" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" data-alt="Sleek white yacht anchored in turquoise water" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbU7x4kASoIuaiW7FH77hfYzV-GZ7C1CkU0hdQtfbcg3865GxJgZig_clSySlHF15EYA1b7j7m6838WzBx_KK2kQe6Y7bGhNoU1uhmN-YyOiXD3HH3RymFiJtPsjpladbXWj5UYthVhVGGiej_bVecU_6vDSqd-WUCCgfz2bhoBD18gtzs6w_uoiTMWy_6TD0A1gvbcPrTeKhFL6sL0u4TijkZFCD6OzntJNwNCuEcaf8XwjeCP1ara-FB0sCjwFeXLTtCuIFjDo8"/>
+<div class="absolute top-4 left-4 bg-navy-deep/80 backdrop-blur text-gold-accent text-xs font-bold px-3 py-1 rounded border border-gold-accent/30">
+                            WITH CAPTAIN
+                        </div>
+<button class="absolute top-4 right-4 bg-white/10 hover:bg-white/30 p-2 rounded-full backdrop-blur-sm transition-colors text-white">
+<span class="material-icons text-base">favorite_border</span>
+</button>
+</div>
+<div class="p-6">
+<div class="flex justify-between items-start mb-2">
+<div>
+<h4 class="text-xl font-medium text-slate-900 dark:text-white mb-1">Azimut Grande 27</h4>
+<div class="flex items-center text-slate-500 text-sm gap-3">
+<span class="flex items-center gap-1"><span class="material-icons text-xs">straighten</span> 27m</span>
+<span class="flex items-center gap-1"><span class="material-icons text-xs">people</span> 10 Guests</span>
+</div>
+</div>
+<div class="flex items-center gap-1 text-gold-accent text-sm font-bold">
+<span class="material-icons text-base">star</span> 4.9
+                            </div>
+</div>
+<div class="border-t border-slate-200 dark:border-slate-800 my-4"></div>
+<div class="flex justify-between items-center">
+<div>
+<p class="text-xs text-slate-400 uppercase font-semibold">From</p>
+<p class="text-lg font-bold text-primary">$5,500 <span class="text-sm font-normal text-slate-500">/ day</span></p>
+</div>
+<button class="px-4 py-2 bg-transparent border border-primary text-primary hover:bg-primary hover:text-white rounded-lg text-sm font-medium transition-colors">
+                                Details
+                            </button>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="group relative rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-xl hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300">
+<div class="relative h-64 overflow-hidden">
+<img alt="Luxury speed boat interior view" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" data-alt="Luxury speed boat interior view" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxOVQ1peIzTOenvuINZZdx9F9BaSno9vTBGCr89iKHbkkZkFIuldUqb28yErfqgNtlSaGPR-kcwDgbb76_9m9Obt_G-qSY0dXF6gql05IdKwDYAwo0iY5DXBhtCE1TZ2rQUWfuDWNwKa1xw6a0ZhUsrVzgiFOR7uc3elSeMv5qm8ljHlD1qDIyCgZqDGEVqhat7fOqMZ3T-eX3aA_iBkeGfmz4vBay2Q-IazpFpZDqSxiHncJEe5PpxiQnwk128EILidghj4JxhgE"/>
+<div class="absolute top-4 left-4 bg-primary/80 backdrop-blur text-white text-xs font-bold px-3 py-1 rounded">
+                            SELF-DRIVE
+                        </div>
+<button class="absolute top-4 right-4 bg-white/10 hover:bg-white/30 p-2 rounded-full backdrop-blur-sm transition-colors text-white">
+<span class="material-icons text-base">favorite_border</span>
+</button>
+</div>
+<div class="p-6">
+<div class="flex justify-between items-start mb-2">
+<div>
+<h4 class="text-xl font-medium text-slate-900 dark:text-white mb-1">Sunseeker Predator</h4>
+<div class="flex items-center text-slate-500 text-sm gap-3">
+<span class="flex items-center gap-1"><span class="material-icons text-xs">straighten</span> 18m</span>
+<span class="flex items-center gap-1"><span class="material-icons text-xs">people</span> 6 Guests</span>
+</div>
+</div>
+<div class="flex items-center gap-1 text-gold-accent text-sm font-bold">
+<span class="material-icons text-base">star</span> 4.8
+                            </div>
+</div>
+<div class="border-t border-slate-200 dark:border-slate-800 my-4"></div>
+<div class="flex justify-between items-center">
+<div>
+<p class="text-xs text-slate-400 uppercase font-semibold">From</p>
+<p class="text-lg font-bold text-primary">$3,200 <span class="text-sm font-normal text-slate-500">/ day</span></p>
+</div>
+<button class="px-4 py-2 bg-transparent border border-primary text-primary hover:bg-primary hover:text-white rounded-lg text-sm font-medium transition-colors">
+                                Details
+                            </button>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="group relative rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-xl hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300">
+<div class="relative h-64 overflow-hidden">
+<img alt="Catamaran sailing near tropical islands" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" data-alt="Catamaran sailing near tropical islands" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDI3U0fGY2xqWJI_nSsF5tqgHbeamG5ACUAw1rxLYY__HvJ66MUCOK9zxvvLkJ2l-vZhOt4yrdtSYoH2Of1L8AKrc9P_7iwn4_XTkMwLZEAUOgh1xdMzburskjJbKqk2kiE4vCRoYTWVKbKwQJbF-wVNAgXBmLmFriBtEua89HTPkeXKXv2b9o6xoxDcDK7ib2-AJQn3AoMQ_bj7bhHOzjZtQYmy0Q04J-jP29qviJ1FZJxXnulDRiLcUTMQTMYXXVw5_ocQCYwpsI"/>
+<div class="absolute top-4 left-4 bg-navy-deep/80 backdrop-blur text-gold-accent text-xs font-bold px-3 py-1 rounded border border-gold-accent/30">
+                            CREW INCLUDED
+                        </div>
+<button class="absolute top-4 right-4 bg-white/10 hover:bg-white/30 p-2 rounded-full backdrop-blur-sm transition-colors text-white">
+<span class="material-icons text-base">favorite_border</span>
+</button>
+</div>
+<div class="p-6">
+<div class="flex justify-between items-start mb-2">
+<div>
+<h4 class="text-xl font-medium text-slate-900 dark:text-white mb-1">Lagoon Seventy 7</h4>
+<div class="flex items-center text-slate-500 text-sm gap-3">
+<span class="flex items-center gap-1"><span class="material-icons text-xs">straighten</span> 23m</span>
+<span class="flex items-center gap-1"><span class="material-icons text-xs">people</span> 12 Guests</span>
+</div>
+</div>
+<div class="flex items-center gap-1 text-gold-accent text-sm font-bold">
+<span class="material-icons text-base">star</span> 5.0
+                            </div>
+</div>
+<div class="border-t border-slate-200 dark:border-slate-800 my-4"></div>
+<div class="flex justify-between items-center">
+<div>
+<p class="text-xs text-slate-400 uppercase font-semibold">From</p>
+<p class="text-lg font-bold text-primary">$8,000 <span class="text-sm font-normal text-slate-500">/ day</span></p>
+</div>
+<button class="px-4 py-2 bg-transparent border border-primary text-primary hover:bg-primary hover:text-white rounded-lg text-sm font-medium transition-colors">
+                                Details
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Marketing/Value Props Section -->
+<section class="py-24 bg-navy-deep text-white relative overflow-hidden">
+<!-- Abstract background pattern -->
+<div class="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-primary/10 to-transparent"></div>
+<div class="max-w-7xl mx-auto px-6 relative z-10">
+<div class="grid md:grid-cols-2 gap-16 items-center">
+<div>
+<h2 class="text-4xl md:text-5xl font-light mb-6">Navigating the <span class="text-gold-accent font-serif italic">Extraordinary</span></h2>
+<p class="text-slate-300 text-lg mb-8 leading-relaxed">
+                        We curate the world's finest maritime experiences. From secluded Mediterranean coves to the vibrant Caribbean islands, our fleet is your key to the ocean's best kept secrets.
+                    </p>
+<div class="grid grid-cols-2 gap-6">
+<div class="flex flex-col">
+<span class="text-3xl font-bold text-white mb-1">500+</span>
+<span class="text-sm text-slate-400 uppercase tracking-wider">Luxury Vessels</span>
+</div>
+<div class="flex flex-col">
+<span class="text-3xl font-bold text-white mb-1">45</span>
+<span class="text-sm text-slate-400 uppercase tracking-wider">Global Destinations</span>
+</div>
+<div class="flex flex-col">
+<span class="text-3xl font-bold text-white mb-1">24/7</span>
+<span class="text-sm text-slate-400 uppercase tracking-wider">Concierge Service</span>
+</div>
+<div class="flex flex-col">
+<span class="text-3xl font-bold text-white mb-1">100%</span>
+<span class="text-sm text-slate-400 uppercase tracking-wider">Verified Owners</span>
+</div>
+</div>
+</div>
+<div class="relative">
+<div class="absolute -inset-4 bg-gold-accent/20 rounded-2xl blur-lg"></div>
+<img alt="Aerial view of yacht in deep blue water" class="relative rounded-2xl shadow-2xl border border-white/10" data-alt="Aerial view of yacht in deep blue water" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBAqnpRPyrVRjl6gWY9cBINVzAuOl9VMZ_LcJbY1XI_gsWuGhIso95u0M44KWlCjgQ9XpcU4tAddULZVmG7m95jSLx4qxvs61FlbAi18PvDeKkXovEeoEdoAgCuhL1r-7ZF3Qvwvkpt87ktVtG6t5dcgHZp-2xywRQlCP7U7VUrtr0fMuNvy2o9A9yaPwJfl84comsRUeLf7nOoQ9RAR5qtOeIEtZRixYvoH9xgNcWbeiBYk3GPuYgV47CzckxzIlquwdBB3rb8sN0"/>
+<div class="absolute -bottom-6 -left-6 bg-background-dark p-6 rounded-xl border border-white/10 shadow-xl max-w-xs">
+<div class="flex items-center gap-4 mb-3">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white">
+<span class="material-icons">verified_user</span>
+</div>
+<div>
+<h5 class="text-white font-medium">Premium Guarantee</h5>
+<p class="text-xs text-slate-400">Insured &amp; Verified Fleet</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer -->
+<footer class="bg-background-dark border-t border-white/5 pt-16 pb-8">
+<div class="max-w-7xl mx-auto px-6">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+<div class="col-span-1 md:col-span-1">
+<a class="flex items-center gap-2 mb-6" href="#">
+<span class="material-icons text-gold-accent text-2xl">sailing</span>
+<span class="text-lg font-bold tracking-widest text-white uppercase">Nautica</span>
+</a>
+<p class="text-slate-400 text-sm leading-relaxed">
+                        Redefining luxury maritime travel. Experience the world from a different perspective.
+                    </p>
+</div>
+<div>
+<h4 class="text-white font-medium mb-4">Discover</h4>
+<ul class="space-y-2 text-sm text-slate-400">
+<li><a class="hover:text-gold-accent transition-colors" href="#">Destinations</a></li>
+<li><a class="hover:text-gold-accent transition-colors" href="#">Yacht Charter</a></li>
+<li><a class="hover:text-gold-accent transition-colors" href="#">Superyachts</a></li>
+<li><a class="hover:text-gold-accent transition-colors" href="#">Experiences</a></li>
+</ul>
+</div>
+<div>
+<h4 class="text-white font-medium mb-4">Support</h4>
+<ul class="space-y-2 text-sm text-slate-400">
+<li><a class="hover:text-gold-accent transition-colors" href="#">Concierge</a></li>
+<li><a class="hover:text-gold-accent transition-colors" href="#">Owner Login</a></li>
+<li><a class="hover:text-gold-accent transition-colors" href="#">Help Center</a></li>
+<li><a class="hover:text-gold-accent transition-colors" href="#">Terms of Service</a></li>
+</ul>
+</div>
+<div>
+<h4 class="text-white font-medium mb-4">Newsletter</h4>
+<p class="text-xs text-slate-400 mb-4">Subscribe for exclusive offers and new fleet arrivals.</p>
+<div class="flex">
+<input class="bg-white/5 border border-white/10 rounded-l px-4 py-2 text-sm text-white focus:outline-none focus:border-primary w-full" placeholder="Email address" type="email"/>
+<button class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-r text-sm transition-colors">Join</button>
+</div>
+</div>
+</div>
+<div class="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+<p class="text-xs text-slate-500">© 2023 Nautica Luxury Rentals. All rights reserved.</p>
+<div class="flex gap-4">
+<a class="text-slate-500 hover:text-white transition-colors" href="#"><i class="material-icons text-lg">facebook</i></a> <!-- approximating icons -->
+<a class="text-slate-500 hover:text-white transition-colors" href="#"><span class="text-sm font-bold">IG</span></a>
+<a class="text-slate-500 hover:text-white transition-colors" href="#"><span class="text-sm font-bold">TW</span></a>
+</div>
+</div>
+</div>
+</footer>
+</body></html>

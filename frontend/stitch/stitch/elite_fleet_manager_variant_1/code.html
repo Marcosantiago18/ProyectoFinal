@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Elite Fleet Manager - Luxury Owner Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f4c025",
+                        "background-light": "#f8f8f5",
+                        "background-dark": "#0B1120", // Modified to a deep nautical navy as per variant description, closer to the theme request
+                        "surface-dark": "#162032",
+                        "surface-dark-glass": "rgba(22, 32, 50, 0.7)",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B1120;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #f4c025;
+        }
+        .glass-panel {
+            background: rgba(22, 32, 50, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .text-glow {
+            text-shadow: 0 0 10px rgba(244, 192, 37, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200 font-display antialiased min-h-screen flex overflow-hidden">
+<!-- Sidebar Navigation -->
+<aside class="w-64 flex-shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a] flex flex-col justify-between relative z-20">
+<div>
+<!-- Logo Area -->
+<div class="h-20 flex items-center px-8 border-b border-slate-200 dark:border-slate-800">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-background-dark font-bold">
+<span class="material-icons text-xl">sailing</span>
+</div>
+<span class="text-xl font-bold uppercase tracking-widest text-slate-900 dark:text-white">Elite<span class="text-primary">Fleet</span></span>
+</div>
+</div>
+<!-- Navigation Links -->
+<nav class="p-4 space-y-2 mt-4">
+<a class="flex items-center gap-4 px-4 py-3 rounded-lg bg-primary/10 text-primary border-l-4 border-primary transition-all group" href="#">
+<span class="material-icons">dashboard</span>
+<span class="font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-primary transition-all group" href="#">
+<span class="material-icons group-hover:text-primary transition-colors">directions_boat</span>
+<span class="font-medium">My Fleet</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-primary transition-all group" href="#">
+<span class="material-icons group-hover:text-primary transition-colors">calendar_month</span>
+<span class="font-medium">Bookings</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-primary transition-all group" href="#">
+<span class="material-icons group-hover:text-primary transition-colors">analytics</span>
+<span class="font-medium">Analytics</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-primary transition-all group" href="#">
+<div class="relative">
+<span class="material-icons group-hover:text-primary transition-colors">chat</span>
+<span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-white dark:border-[#0f172a]"></span>
+</div>
+<span class="font-medium">Messages</span>
+</a>
+</nav>
+</div>
+<!-- Bottom Actions -->
+<div class="p-4 border-t border-slate-200 dark:border-slate-800">
+<a class="flex items-center gap-4 px-4 py-3 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-primary transition-all group" href="#">
+<span class="material-icons group-hover:text-primary transition-colors">settings</span>
+<span class="font-medium">Settings</span>
+</a>
+<div class="mt-4 flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800/50">
+<img alt="Profile Avatar" class="w-10 h-10 rounded-full object-cover border border-slate-300 dark:border-slate-600" data-alt="Portrait of a smiling man in a suit" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3tUB2Xtl7bTKLqysiiWPGAmdfHC5Djx993JuWbQYhcRP2dCi6QHs9_M05BUQGQi4v22bJm-REDhssZJtg1j9O2sqRwyykAYtVoBKwEAfEgILjl46fHnBZEmexgr4L6C3vzNXZz-f0GiXynAurLNx2pPEdMVoMDVF08pOF4dnime7kva7vt1mrBCwn6nVDvniNHuv3amAKD7SReTWupMx4ALOIr3EC1h2RU5jzAKeXUn8uMUjY9WsJiUKB9tbhJrrp8_gXJKZLBP0"/>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-semibold text-slate-900 dark:text-white truncate">Capt. Reynolds</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 truncate">Owner</p>
+</div>
+<button class="text-slate-400 hover:text-primary">
+<span class="material-icons text-sm">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto relative">
+<!-- Background decorative elements for depth -->
+<div class="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px] pointer-events-none"></div>
+<!-- Header -->
+<header class="h-20 flex items-center justify-between px-8 sticky top-0 z-10 glass-panel border-b-0">
+<div>
+<h1 class="text-2xl font-bold text-slate-900 dark:text-white">Good Evening, Captain</h1>
+<p class="text-sm text-slate-500 dark:text-slate-400">Here's what's happening with your fleet today.</p>
+</div>
+<div class="flex items-center gap-6">
+<!-- Search -->
+<div class="relative hidden md:block">
+<span class="material-icons absolute left-3 top-2.5 text-slate-400">search</span>
+<input class="bg-slate-100 dark:bg-slate-800/50 border-none rounded-lg pl-10 pr-4 py-2 w-64 focus:ring-1 focus:ring-primary text-sm text-slate-800 dark:text-slate-200 placeholder-slate-500" placeholder="Search vessel, booking ID..." type="text"/>
+</div>
+<!-- Notifications -->
+<button class="relative p-2 text-slate-400 hover:text-white transition-colors">
+<span class="material-icons">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full animate-pulse"></span>
+</button>
+</div>
+</header>
+<div class="p-8 space-y-8 pb-12">
+<!-- KPI Cards Row -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- KPI 1: Revenue -->
+<div class="glass-panel p-6 rounded-xl relative overflow-hidden group">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-sm text-slate-400 font-medium uppercase tracking-wider">Total Revenue</p>
+<h3 class="text-3xl font-bold text-white mt-1 group-hover:text-primary transition-colors">$124,500</h3>
+</div>
+<div class="p-2 bg-primary/10 rounded-lg text-primary">
+<span class="material-icons">attach_money</span>
+</div>
+</div>
+<div class="flex items-end justify-between">
+<div class="flex items-center text-emerald-400 text-sm font-medium bg-emerald-400/10 px-2 py-0.5 rounded">
+<span class="material-icons text-sm mr-1">trending_up</span>
+<span>+12.5%</span>
+</div>
+<div class="h-10 w-24 flex items-end gap-1">
+<!-- Fake sparkline bars -->
+<div class="w-1/6 bg-primary/30 h-[40%] rounded-t-sm"></div>
+<div class="w-1/6 bg-primary/40 h-[60%] rounded-t-sm"></div>
+<div class="w-1/6 bg-primary/30 h-[50%] rounded-t-sm"></div>
+<div class="w-1/6 bg-primary/60 h-[80%] rounded-t-sm"></div>
+<div class="w-1/6 bg-primary/40 h-[70%] rounded-t-sm"></div>
+<div class="w-1/6 bg-primary h-[95%] rounded-t-sm shadow-[0_0_10px_rgba(244,192,37,0.5)]"></div>
+</div>
+</div>
+</div>
+<!-- KPI 2: Active Charters -->
+<div class="glass-panel p-6 rounded-xl relative overflow-hidden">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-sm text-slate-400 font-medium uppercase tracking-wider">Active Charters</p>
+<h3 class="text-3xl font-bold text-white mt-1">3 <span class="text-lg text-slate-500 font-normal">/ 12</span></h3>
+</div>
+<div class="p-2 bg-blue-500/10 rounded-lg text-blue-400">
+<span class="material-icons">sailing</span>
+</div>
+</div>
+<div class="flex items-center gap-2 mt-4">
+<span class="relative flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+</span>
+<p class="text-sm text-slate-400">Currently at sea</p>
+</div>
+</div>
+<!-- KPI 3: New Inquiries -->
+<div class="glass-panel p-6 rounded-xl relative overflow-hidden">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-sm text-slate-400 font-medium uppercase tracking-wider">New Inquiries</p>
+<h3 class="text-3xl font-bold text-white mt-1">8</h3>
+</div>
+<div class="p-2 bg-primary/10 rounded-lg text-primary">
+<span class="material-icons">mail</span>
+</div>
+</div>
+<div class="mt-2 space-y-2">
+<div class="flex items-center justify-between text-sm py-1 border-b border-white/5">
+<span class="text-slate-300">Wedding Event</span>
+<span class="text-xs text-slate-500">2m ago</span>
+</div>
+<div class="flex items-center justify-between text-sm py-1">
+<span class="text-slate-300">Weekend Rental</span>
+<span class="text-xs text-slate-500">1h ago</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Left Column: Fleet Table -->
+<div class="lg:col-span-2 space-y-6">
+<div class="flex items-center justify-between">
+<h2 class="text-xl font-bold text-white">Fleet Status</h2>
+<button class="text-sm text-primary hover:text-white transition-colors flex items-center gap-1">
+                            View All <span class="material-icons text-sm">arrow_forward</span>
+</button>
+</div>
+<div class="glass-panel rounded-xl overflow-hidden border border-slate-800">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-900/50 border-b border-slate-700/50 text-xs uppercase text-slate-400 tracking-wider">
+<th class="px-6 py-4 font-medium">Vessel Name</th>
+<th class="px-6 py-4 font-medium">Type</th>
+<th class="px-6 py-4 font-medium">Status</th>
+<th class="px-6 py-4 font-medium">Next Booking</th>
+<th class="px-6 py-4 font-medium text-right">Action</th>
+</tr>
+</thead>
+<tbody class="text-sm divide-y divide-slate-800/50">
+<!-- Row 1 -->
+<tr class="hover:bg-slate-800/30 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-4">
+<img alt="Luxury Yacht Thumbnail" class="w-12 h-12 rounded-lg object-cover shadow-md group-hover:scale-105 transition-transform duration-300" data-alt="Sleek white yacht on blue water" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBlz5K3f0ZY2y3EQ1CZWjHDRLlJmsWgJAbxUbSPp7OLOFbJy0k2DPWyXDK-cYK0hNvwnke8MXtc8OSX31KWORTFmD2sw2iVjQcyFAvtM-6e-9BtWODD2MOAhMLl7yqOmei5v9LjD7IriRTwmHBPXQ6Xv0qnAsd9f9CTfdu2YRSjLsUmqA4CBRHDHHo-FD6INsPoktpELcMozgVCzQ7yVaMvENLfyVu5GzmgmjreuRPLhf2Vwtk64AkVCXhSGP58FPH2EE3RqAbg1SQ"/>
+<div>
+<p class="font-bold text-white">The Golden Horizon</p>
+<p class="text-xs text-slate-500">65ft Azimut</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-slate-300">Super Yacht</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                                On Charter
+                                            </span>
+</td>
+<td class="px-6 py-4 text-slate-300">Oct 24, 2023</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:text-white hover:bg-primary/20 border border-primary/30 hover:border-primary px-3 py-1.5 rounded transition-all text-xs font-medium uppercase tracking-wide">
+                                                Manage
+                                            </button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-slate-800/30 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-4">
+<img alt="Luxury Yacht Thumbnail" class="w-12 h-12 rounded-lg object-cover shadow-md group-hover:scale-105 transition-transform duration-300" data-alt="Modern yacht interior bedroom view" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZk2g0dUmaQGTGS3jxdpGLpjLpc3dZX9oe3dEUBKvkpLmPfVOsxFxHYqqPx5y_674ulKmfFr_ykDrOLXd2WUM74cGIDWjjk2C6z0Tc-SUrqPDIbNwQyBxuOdsI3UzmkdkEOXghsBh9IsGFPfyrTWRrPFQy4gT0qvFYrpvNXAsUeUGbGsQrC6Yt0UkvgUxyoauXEV3kJ01JOVqncj4SnEdp_cYgGQwE-I15YOsKL6Fz6mHS3WvP7sqW5mA54ej9KKYFPfGZxoU0zQs"/>
+<div>
+<p class="font-bold text-white">Ocean's Whisper</p>
+<p class="text-xs text-slate-500">50ft Sunseeker</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-slate-300">Sport Yacht</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                                Ready
+                                            </span>
+</td>
+<td class="px-6 py-4 text-slate-300">Tomorrow</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:text-white hover:bg-primary/20 border border-primary/30 hover:border-primary px-3 py-1.5 rounded transition-all text-xs font-medium uppercase tracking-wide">
+                                                Manage
+                                            </button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-slate-800/30 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-4">
+<img alt="Jet Ski Thumbnail" class="w-12 h-12 rounded-lg object-cover shadow-md group-hover:scale-105 transition-transform duration-300" data-alt="Person riding a jet ski fast" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDgwxx5R5dSKLEV3JkSynf_MjBrTCrgQnDWtZ8SAn56bS7ZvsbXvLiBW5L6y43obKWuiNsxy_TuSL41Iv7gL2htfrlQ5vF3Lfidhdq_GiBZO5L_4euLsyADbRzqZkhfAHEh-KDJzGe84jj8cw4imf_NxVDbXHSGcxkXRnF_3KPbcRUZ0QpzuxM-qBP9f4EUsjv6EY0Bb7QxdmAzlVRIIX46d04ecb4D7MlM9P1wnb7YDT_WIghKhhVBX-W0yOf4E4Gm-9X5GVH_pWk"/>
+<div>
+<p class="font-bold text-white">SeaDoo Spark 1</p>
+<p class="text-xs text-slate-500">Jet Ski</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-slate-300">Watercraft</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                                Maintenance
+                                            </span>
+</td>
+<td class="px-6 py-4 text-slate-300">Nov 01, 2023</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:text-white hover:bg-primary/20 border border-primary/30 hover:border-primary px-3 py-1.5 rounded transition-all text-xs font-medium uppercase tracking-wide">
+                                                Manage
+                                            </button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-slate-800/30 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-4">
+<img alt="Catamaran Thumbnail" class="w-12 h-12 rounded-lg object-cover shadow-md group-hover:scale-105 transition-transform duration-300" data-alt="Luxury catamaran sailing on ocean" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAWJ7BFNCSS5riDEdOdbl5odHSLy48yPC42LzN--Vp4YBGcjnVvrYPjRJ_xyRvpjUkC-qhWQqe8p8gkJMJnPDOfYknvGWJbUGF9KWjSeN1Mav0X6_bfsL_8NSr05fNB98LFd9QTlDcENYS1GK5opml7zqXMfJUX5i6O3zgQ_lbzPOaRLNNXuxKITHInb7d1INytTWwV9SNBkSo7jD9z3E6E-knCNttx5s9VUXWIoQZU_4HHN2bcNn7RLLKu07QdqaTcAikLMxomBaM"/>
+<div>
+<p class="font-bold text-white">Lagoon 450</p>
+<p class="text-xs text-slate-500">Catamaran</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-slate-300">Sailing Yacht</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                                Ready
+                                            </span>
+</td>
+<td class="px-6 py-4 text-slate-300">Oct 28, 2023</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:text-white hover:bg-primary/20 border border-primary/30 hover:border-primary px-3 py-1.5 rounded transition-all text-xs font-medium uppercase tracking-wide">
+                                                Manage
+                                            </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Right Column: Recent Activity & Calendar -->
+<div class="space-y-6">
+<!-- Mini Calendar Widget -->
+<div class="glass-panel p-6 rounded-xl border border-slate-800">
+<h3 class="text-lg font-bold text-white mb-4">October 2023</h3>
+<div class="grid grid-cols-7 gap-1 text-center text-sm mb-2 text-slate-500">
+<span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+</div>
+<div class="grid grid-cols-7 gap-1 text-center text-sm font-medium text-slate-300">
+<!-- Empty days -->
+<span class="p-2 text-slate-700">29</span>
+<span class="p-2 text-slate-700">30</span>
+<!-- Days -->
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">1</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">2</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">3</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">4</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">5</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">6</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">7</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">8</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">9</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">10</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">11</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">12</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">13</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">14</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">15</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">16</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">17</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">18</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">19</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">20</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">21</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">22</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">23</span>
+<span class="p-2 bg-primary text-background-dark font-bold rounded shadow-lg shadow-primary/40">24</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">25</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer relative">
+                                26 <span class="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-emerald-400 rounded-full"></span>
+</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">27</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">28</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">29</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">30</span>
+<span class="p-2 hover:bg-white/5 rounded cursor-pointer">31</span>
+</div>
+</div>
+<!-- Recent Messages -->
+<div class="glass-panel p-6 rounded-xl border border-slate-800">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-lg font-bold text-white">Messages</h3>
+<button class="text-xs text-primary hover:text-white">Compose</button>
+</div>
+<div class="space-y-4">
+<div class="flex gap-3 group cursor-pointer">
+<img alt="User Avatar" class="w-10 h-10 rounded-full object-cover ring-2 ring-transparent group-hover:ring-primary transition-all" data-alt="Woman portrait smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDFPiA9eO-Yw_OM28gexb_kCvT40OnLWBREPqsQaJFLlnlSno1-iym23-pe7bnY6W9e6KTP_6FadVtFBBohpmksuILK2VZwtkssn4hO25wJxCOARC06Zl5Xgu5jDzOyEnZAeHuZNdoL8L3wMT0VUwmYkdEILTEB9Mmiq2IyLqq7V50J6PdyUXhyVxPuBR6EsBvmjy0penKyUEeodnbR2BJ_d1alzaia05m0fiV0JVhfKT1UVb14Sz_NIVfJXpluHym18NKqofEcvO0"/>
+<div>
+<div class="flex justify-between items-baseline w-full">
+<h4 class="text-sm font-semibold text-white">Elena Fisher</h4>
+<span class="text-xs text-slate-500">10m</span>
+</div>
+<p class="text-xs text-slate-400 line-clamp-1">Is the Golden Horizon available for next weekend?</p>
+</div>
+</div>
+<div class="flex gap-3 group cursor-pointer">
+<div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-white font-bold ring-2 ring-transparent group-hover:ring-primary transition-all">
+                                    JS
+                                </div>
+<div>
+<div class="flex justify-between items-baseline w-full">
+<h4 class="text-sm font-semibold text-white">John Smith</h4>
+<span class="text-xs text-slate-500">2h</span>
+</div>
+<p class="text-xs text-slate-400 line-clamp-1">Confirmed booking for the jet ski trip.</p>
+</div>
+</div>
+<div class="flex gap-3 group cursor-pointer">
+<img alt="User Avatar" class="w-10 h-10 rounded-full object-cover ring-2 ring-transparent group-hover:ring-primary transition-all" data-alt="Man with glasses portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAt7ueV5b2i1e5qQzSymnCJUGchmcA926JNEKZGlwhNeuwPtwITyre5FHu0NLmxJWGLYpyL9zN5_9MtoqTMcqb9n-t5QfDsL9MBTtW8hCi94Zvhr8kWfbuMPJ79oOs0ZQnCBXxfLI932DRnSb3Strus7u5TOz6YTsSM4LZyvkjsAnQncI3sQec3q7UW7m6hvLUbf3TirOEUXHWzfjWQC8KkaG1AeUSxR2ntMbMb29n2J0x6-iYj7a5I5ydNNyqWlAyrIdgd3OGS9dQ"/>
+<div>
+<div class="flex justify-between items-baseline w-full">
+<h4 class="text-sm font-semibold text-white">Mike Ross</h4>
+<span class="text-xs text-slate-500">5h</span>
+</div>
+<p class="text-xs text-slate-400 line-clamp-1">Regarding the maintenance schedule.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>
