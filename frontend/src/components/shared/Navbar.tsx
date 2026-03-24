@@ -60,7 +60,10 @@ const Navbar: React.FC = () => {
                             <Link to="/my-bookings" className="hidden md:block text-sm font-medium text-slate-200 hover:text-white transition-colors">
                                 {t('my_bookings')}
                             </Link>
-                            {usuario.rol === 'admin' && (
+                            <Link to="/messages" className="hidden md:block text-sm font-medium text-slate-200 hover:text-white transition-colors relative">
+                                Mensajes
+                            </Link>
+                            {(usuario.rol === 'admin' || usuario.rol === 'capitan') && (
                                 <Link to="/dashboard" className="hidden md:block text-sm font-medium text-gold-accent hover:text-white transition-colors">
                                     {t('nav_dashboard')}
                                 </Link>
@@ -102,13 +105,22 @@ const Navbar: React.FC = () => {
             {isMobileMenuOpen && (
                 <div className="md:hidden glass-nav absolute w-full border-t border-white/10">
                     <div className="flex flex-col p-4 space-y-4">
-                        <Link to="/search?tipo=yacht" className="text-slate-200 hover:text-gold-accent">{t('nav_yachts')}</Link>
-                        <Link to="/search?tipo=watercraft" className="text-slate-200 hover:text-gold-accent">{t('nav_jetskis')}</Link>
-                        <Link to="/experiences" className="text-slate-200 hover:text-gold-accent">{t('nav_experiences')}</Link>
-                        {!isAuthenticated && (
+                        <Link to="/search?tipo=yacht" onClick={() => setIsMobileMenuOpen(false)} className="text-slate-200 hover:text-gold-accent">{t('nav_yachts')}</Link>
+                        <Link to="/search?tipo=watercraft" onClick={() => setIsMobileMenuOpen(false)} className="text-slate-200 hover:text-gold-accent">{t('nav_jetskis')}</Link>
+                        <Link to="/experiences" onClick={() => setIsMobileMenuOpen(false)} className="text-slate-200 hover:text-gold-accent">{t('nav_experiences')}</Link>
+                        {isAuthenticated ? (
                             <>
-                                <Link to="/login" className="text-gold-accent">{t('nav_login')}</Link>
-                                <Link to="/register" className="text-white">{t('nav_register')}</Link>
+                                <Link to="/my-bookings" onClick={() => setIsMobileMenuOpen(false)} className="text-slate-200 hover:text-gold-accent">{t('my_bookings')}</Link>
+                                <Link to="/messages" onClick={() => setIsMobileMenuOpen(false)} className="text-slate-200 hover:text-gold-accent">Mensajes</Link>
+                                {(usuario?.rol === 'admin' || usuario?.rol === 'capitan') && (
+                                    <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="text-gold-accent hover:text-white">{t('nav_dashboard')}</Link>
+                                )}
+                                <button onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }} className="text-left text-[#ef4444] hover:text-white">{t('nav_logout')}</button>
+                            </>
+                        ) : (
+                            <>
+                                <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="text-gold-accent">{t('nav_login')}</Link>
+                                <Link to="/register" onClick={() => setIsMobileMenuOpen(false)} className="text-white">{t('nav_register')}</Link>
                             </>
                         )}
                         <div className="flex gap-4 pt-4 border-t border-white/10">

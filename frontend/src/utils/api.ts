@@ -161,10 +161,104 @@ export const dashboardAPI = {
     },
 };
 
+// ==================== AMARRES ====================
+
+export const amarresAPI = {
+    getAll: async (filters?: { estado?: string; propietario_id?: number }) => {
+        const params = filters ? new URLSearchParams(filters as any).toString() : '';
+        return fetchAPI(`/amarres${params ? `?${params}` : ''}`);
+    },
+
+    alquilar: async (id: number, data: { propietario_id: number; meses: number; embarcacion_id?: number }, token: string) => {
+        return fetchAPI(`/amarres/${id}/alquilar`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+            token,
+        });
+    },
+
+    liberar: async (id: number, token: string) => {
+        return fetchAPI(`/amarres/${id}/liberar`, {
+            method: 'POST',
+            token,
+        });
+    },
+
+    create: async (data: any, token: string) => {
+        return fetchAPI('/amarres', {
+            method: 'POST',
+            body: JSON.stringify(data),
+            token,
+        });
+    },
+
+    update: async (id: number, data: any, token: string) => {
+        return fetchAPI(`/amarres/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+            token,
+        });
+    },
+};
+
+// ==================== MENSAJES ====================
+
+export const mensajesAPI = {
+    getContactos: async (usuario_id: number, token: string) => {
+        return fetchAPI(`/mensajes/contactos?usuario_id=${usuario_id}`, { token });
+    },
+
+    getMensajes: async (usuario_id: number, contacto_id: number, token: string) => {
+        return fetchAPI(`/mensajes/${contacto_id}?usuario_id=${usuario_id}`, { token });
+    },
+
+    sendMensaje: async (data: { remitente_id: number; destinatario_id: number; contenido: string }, token: string) => {
+        return fetchAPI('/mensajes', {
+            method: 'POST',
+            body: JSON.stringify(data),
+            token,
+        });
+    },
+};
+
 // ==================== HEALTH CHECK ====================
 
 export const healthAPI = {
     check: async () => {
         return fetchAPI('/health');
     },
+};
+
+// ==================== REVIEWS ====================
+export const reviewsAPI = {
+    getByEmbarcacion: async (embarcacion_id: number) => {
+        return fetchAPI(`/reviews?embarcacion_id=${embarcacion_id}`);
+    },
+    create: async (data: any, token: string) => {
+        return fetchAPI('/reviews', {
+            method: 'POST',
+            body: JSON.stringify(data),
+            token,
+        });
+    }
+};
+
+// ==================== FAVORITOS ====================
+export const favoritosAPI = {
+    getByUsuario: async (usuario_id: number, token?: string) => {
+        return fetchAPI(`/favoritos?usuario_id=${usuario_id}`, { token });
+    },
+    add: async (data: { usuario_id: number; embarcacion_id: number }, token: string) => {
+        return fetchAPI('/favoritos', {
+            method: 'POST',
+            body: JSON.stringify(data),
+            token,
+        });
+    },
+    remove: async (id: number, token: string) => {
+        return fetchAPI(`/favoritos/${id}`, {
+            method: 'DELETE',
+            token,
+        });
+    }
 };

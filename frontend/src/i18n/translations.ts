@@ -131,6 +131,9 @@ export const translations = {
         view_vessels: 'Ver Embarcaciones',
         view_boat: 'Ver Barco',
         cancel_booking: 'Cancelar',
+        confirm_cancel_booking: '¿Estás seguro de que deseas cancelar esta reserva?',
+        booking_cancelled: 'Reserva cancelada correctamente',
+        error_canceling_booking: 'Error al cancelar la reserva',
         booking_status: 'Estado',
         event_general: 'Evento General',
 
@@ -188,7 +191,7 @@ export const translations = {
         vessel_name_label: 'Nombre de la Embarcación',
         vessel_category_label: 'Categoría',
         capacity_label: 'Capacidad',
-        length_label: 'Longitud (pies)',
+        length_label: 'Longitud (m)',
         price_day_label: 'Precio por Día',
         description_label: 'Descripción',
         image_url_label: 'Imagen',
@@ -262,6 +265,34 @@ export const translations = {
         type_sailboat: 'Velero',
         type_watercraft: 'Moto de Agua',
         type_catamaran: 'Catamarán',
+
+        // Marina / Amarres
+        marina_title: 'Mapa de la Marina',
+        marina_subtitle: 'Vista interactiva de los amarres del puerto',
+        marina_tab: 'Marina',
+        berth_available: 'Disponible',
+        berth_occupied: 'Ocupado',
+        berth_maintenance: 'Mantenimiento',
+        berth_details: 'Detalles del Amarre',
+        berth_code: 'Código',
+        berth_dock: 'Muelle',
+        berth_max_length: 'Longitud Máx.',
+        berth_price: 'Precio/mes',
+        berth_vessel: 'Embarcación',
+        berth_status: 'Estado',
+        berth_update: 'Actualizar Estado',
+        berth_no_vessel: 'Sin embarcación asignada',
+        berths_total: 'Amarres Totales',
+        berths_occupied: 'Ocupados',
+        berths_available: 'Disponibles',
+        berths_maintenance: 'En Mantenimiento',
+        select_vessel: 'Seleccionar embarcación...',
+        legend: 'Leyenda',
+
+        // Maintenance cards view
+        maintenance_requested: 'Solicitado el',
+        mark_complete: 'Completar',
+        mark_in_progress: 'En Proceso',
     },
     en: {
         // ... existing auth keys ...
@@ -394,6 +425,9 @@ export const translations = {
         view_vessels: 'View Vessels',
         view_boat: 'View Boat',
         cancel_booking: 'Cancel',
+        confirm_cancel_booking: 'Are you sure you want to cancel this booking?',
+        booking_cancelled: 'Booking cancelled successfully',
+        error_canceling_booking: 'Error canceling the booking',
         booking_status: 'Status',
         event_general: 'General Event',
 
@@ -451,7 +485,7 @@ export const translations = {
         vessel_name_label: 'Vessel Name',
         vessel_category_label: 'Category',
         capacity_label: 'Capacity',
-        length_label: 'Length (ft)',
+        length_label: 'Length (m)',
         price_day_label: 'Price per Day',
         description_label: 'Description',
         image_url_label: 'Image',
@@ -525,6 +559,34 @@ export const translations = {
         type_sailboat: 'Sailboat',
         type_watercraft: 'Watercraft',
         type_catamaran: 'Catamaran',
+
+        // Marina / Berths
+        marina_title: 'Marina Map',
+        marina_subtitle: 'Interactive view of the port berths',
+        marina_tab: 'Marina',
+        berth_available: 'Available',
+        berth_occupied: 'Occupied',
+        berth_maintenance: 'Maintenance',
+        berth_details: 'Berth Details',
+        berth_code: 'Code',
+        berth_dock: 'Dock',
+        berth_max_length: 'Max Length',
+        berth_price: 'Price/month',
+        berth_vessel: 'Vessel',
+        berth_status: 'Status',
+        berth_update: 'Update Status',
+        berth_no_vessel: 'No vessel assigned',
+        berths_total: 'Total Berths',
+        berths_occupied: 'Occupied',
+        berths_available: 'Available',
+        berths_maintenance: 'In Maintenance',
+        select_vessel: 'Select vessel...',
+        legend: 'Legend',
+
+        // Maintenance cards view
+        maintenance_requested: 'Requested on',
+        mark_complete: 'Complete',
+        mark_in_progress: 'In Progress',
     }
 };
 

@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 import os
 from functools import wraps
 from werkzeug.utils import secure_filename
+import stripe
 
 # Configuración de la aplicación
 app = Flask(__name__)
@@ -18,6 +19,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.urandom(24)
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# Configuración Stripe
+stripe.api_key = os.environ.get("STRIPE_API_KEY", "sk_test_placeholder")
 
 # Inicialización de extensiones
 db = SQLAlchemy(app)
@@ -72,10 +76,12 @@ class Embarcacion(db.Model):
     incluye_tripulacion = db.Column(db.Boolean, default=False)
     ubicacion = db.Column(db.String(100))
     rating = db.Column(db.Float, default=0.0)
+    propietario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
     
     reservas = db.relationship('Reserva', backref='embarcacion', lazy=True)
     mantenimientos = db.relationship('Mantenimiento', backref='embarcacion', lazy=True)
+    propietario = db.relationship('Usuario', backref='embarcaciones')
     
     def to_dict(self) -> dict:
         return {
@@ -93,6 +99,8 @@ class Embarcacion(db.Model):
             'incluye_tripulacion': self.incluye_tripulacion,
             'ubicacion': self.ubicacion,
             'rating': self.rating,
+            'propietario_id': self.propietario_id,
+            'propietario_nombre': self.propietario.nombre if self.propietario else 'Nautica',
             'fecha_creacion': self.fecha_creacion.isoformat()
         }
 
@@ -128,6 +136,90 @@ class Reserva(db.Model):
         }
 
 
+class Amarre(db.Model):
+    __tablename__ = 'amarres'
+
+    id = db.Column(db.Integer, primary_key=True)
+    codigo = db.Column(db.String(10), unique=True, nullable=False)  # Ej: A-01, B-03
+    muelle = db.Column(db.String(50), default='Principal')
+    fila = db.Column(db.String(5))    # A, B, C, ...
+    numero = db.Column(db.Integer)
+    longitud_max = db.Column(db.Float)  # metros
+    manga_max = db.Column(db.Float)
+    calado_max = db.Column(db.Float)
+    precio_mes = db.Column(db.Float, default=0.0)
+    estado = db.Column(db.String(20), default='disponible')  # disponible, ocupado, mantenimiento
+    embarcacion_id = db.Column(db.Integer, db.ForeignKey('embarcaciones.id'), nullable=True)
+    propietario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
+    fecha_fin_alquiler = db.Column(db.DateTime, nullable=True)
+    notas = db.Column(db.Text)
+
+    def to_dict(self) -> dict:
+        return {
+            'id': self.id,
+            'codigo': self.codigo,
+            'muelle': self.muelle,
+            'fila': self.fila,
+            'numero': self.numero,
+            'longitud_max': self.longitud_max,
+            'manga_max': self.manga_max,
+            'calado_max': self.calado_max,
+            'precio_mes': self.precio_mes,
+            'estado': self.estado,
+            'embarcacion_id': self.embarcacion_id,
+            'embarcacion_nombre': self.embarcacion.nombre if self.embarcacion_id and self.embarcacion else None,
+            'propietario_id': self.propietario_id,
+            'propietario_nombre': self.propietario.nombre if self.propietario else None,
+            'fecha_fin_alquiler': self.fecha_fin_alquiler.isoformat() if self.fecha_fin_alquiler else None,
+            'notas': self.notas,
+        }
+
+    embarcacion = db.relationship('Embarcacion', foreign_keys=[embarcacion_id], lazy=True)
+    propietario = db.relationship('Usuario', foreign_keys=[propietario_id], lazy=True)
+
+class Review(db.Model):
+    __tablename__ = 'reviews'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+    embarcacion_id = db.Column(db.Integer, db.ForeignKey('embarcaciones.id'), nullable=False)
+    rating = db.Column(db.Integer, nullable=False)
+    comentario = db.Column(db.Text)
+    fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    usuario = db.relationship('Usuario', backref='reviews', lazy=True)
+    
+    def to_dict(self) -> dict:
+        return {
+            'id': self.id,
+            'usuario_id': self.usuario_id,
+            'usuario_nombre': self.usuario.nombre if self.usuario else None,
+            'embarcacion_id': self.embarcacion_id,
+            'rating': self.rating,
+            'comentario': self.comentario,
+            'fecha_creacion': self.fecha_creacion.isoformat()
+        }
+
+class Favorito(db.Model):
+    __tablename__ = 'favoritos'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+    embarcacion_id = db.Column(db.Integer, db.ForeignKey('embarcaciones.id'), nullable=False)
+    fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    embarcacion = db.relationship('Embarcacion', lazy=True)
+    
+    def to_dict(self) -> dict:
+        return {
+            'id': self.id,
+            'usuario_id': self.usuario_id,
+            'embarcacion_id': self.embarcacion_id,
+            'embarcacion': self.embarcacion.to_dict() if self.embarcacion else None,
+            'fecha_creacion': self.fecha_creacion.isoformat()
+        }
+
+
 class Mantenimiento(db.Model):
     __tablename__ = 'mantenimientos'
     
@@ -155,6 +247,30 @@ class Mantenimiento(db.Model):
             'notas': self.notas
         }
 
+class Mensaje(db.Model):
+    __tablename__ = 'mensajes'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    remitente_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+    destinatario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+    contenido = db.Column(db.Text, nullable=False)
+    fecha_envio = db.Column(db.DateTime, default=datetime.utcnow)
+    leido = db.Column(db.Boolean, default=False)
+    
+    remitente = db.relationship('Usuario', foreign_keys=[remitente_id], lazy=True)
+    destinatario = db.relationship('Usuario', foreign_keys=[destinatario_id], lazy=True)
+
+    def to_dict(self) -> dict:
+        return {
+            'id': self.id,
+            'remitente_id': self.remitente_id,
+            'remitente_nombre': self.remitente.nombre if self.remitente else None,
+            'destinatario_id': self.destinatario_id,
+            'destinatario_nombre': self.destinatario.nombre if self.destinatario else None,
+            'contenido': self.contenido,
+            'fecha_envio': self.fecha_envio.isoformat(),
+            'leido': self.leido
+        }
 
 # ==================== DECORADORES ====================
 
@@ -229,7 +345,8 @@ def get_embarcaciones():
     try:
         tipo = request.args.get('tipo')
         ubicacion = request.args.get('ubicacion')
-        estado = request.args.get('estado', 'disponible')
+        estado = request.args.get('estado')
+        propietario_id = request.args.get('propietario_id')
         
         query = Embarcacion.query
         
@@ -239,6 +356,8 @@ def get_embarcaciones():
             query = query.filter(Embarcacion.ubicacion.ilike(f'%{ubicacion}%'))
         if estado:
             query = query.filter_by(estado=estado)
+        if propietario_id:
+            query = query.filter_by(propietario_id=int(propietario_id))
         
         embarcaciones = query.all()
         return jsonify([e.to_dict() for e in embarcaciones]), 200
@@ -408,11 +527,14 @@ def get_reservas():
     try:
         usuario_id = request.args.get('usuario_id')
         estado = request.args.get('estado')
+        embarcacion_id = request.args.get('embarcacion_id')
         
         query = Reserva.query
         
         if usuario_id:
             query = query.filter_by(usuario_id=usuario_id)
+        if embarcacion_id:
+            query = query.filter_by(embarcacion_id=embarcacion_id)
         if estado:
             query = query.filter_by(estado=estado)
         
@@ -456,9 +578,10 @@ def create_reserva():
         if conflictos:
             return jsonify({'error': 'La embarcación no está disponible en esas fechas'}), 400
         
-        # Calcular precio total
+        # Utilizar precio_total provisto por el frontend, o calcular mínimo 1 día
         dias = (fecha_fin - fecha_inicio).days
-        precio_total = dias * embarcacion.precio_dia
+        precio_total_calculado = max(1, dias) * embarcacion.precio_dia
+        precio_total = data.get('precio_total', precio_total_calculado)
         
         reserva = Reserva(
             usuario_id=data['usuario_id'],
@@ -501,6 +624,100 @@ def update_reserva(id: int):
             'message': 'Reserva actualizada exitosamente',
             'reserva': reserva.to_dict()
         }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+# ==================== RUTAS - REVIEWS ====================
+
+@app.route('/api/reviews', methods=['GET'])
+def get_reviews():
+    try:
+        embarcacion_id = request.args.get('embarcacion_id')
+        if embarcacion_id:
+            reviews = Review.query.filter_by(embarcacion_id=embarcacion_id).order_by(Review.fecha_creacion.desc()).all()
+            return jsonify([r.to_dict() for r in reviews]), 200
+        return jsonify([]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/reviews', methods=['POST'])
+def create_review():
+    try:
+        data = request.get_json()
+        review = Review(
+            usuario_id=data['usuario_id'],
+            embarcacion_id=data['embarcacion_id'],
+            rating=data['rating'],
+            comentario=data.get('comentario')
+        )
+        db.session.add(review)
+        
+        db.session.flush()
+        todas_reviews = Review.query.filter_by(embarcacion_id=data['embarcacion_id']).all()
+        promedio = sum(r.rating for r in todas_reviews) / len(todas_reviews)
+        embarcacion = Embarcacion.query.get(data['embarcacion_id'])
+        embarcacion.rating = round(promedio, 1)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Reseña creada exitosamente',
+            'review': review.to_dict()
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+# ==================== RUTAS - FAVORITOS ====================
+
+@app.route('/api/favoritos', methods=['GET'])
+def get_favoritos():
+    try:
+        usuario_id = request.args.get('usuario_id')
+        if usuario_id:
+            favoritos = Favorito.query.filter_by(usuario_id=usuario_id).order_by(Favorito.fecha_creacion.desc()).all()
+            return jsonify([f.to_dict() for f in favoritos]), 200
+        return jsonify([]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/favoritos', methods=['POST'])
+def create_favorito():
+    try:
+        data = request.get_json()
+        existente = Favorito.query.filter_by(
+            usuario_id=data['usuario_id'],
+            embarcacion_id=data['embarcacion_id']
+        ).first()
+        
+        if existente:
+            return jsonify({'message': 'Ya está en favoritos', 'favorito': existente.to_dict()}), 200
+            
+        favorito = Favorito(
+            usuario_id=data['usuario_id'],
+            embarcacion_id=data['embarcacion_id']
+        )
+        db.session.add(favorito)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Añadido a favoritos',
+            'favorito': favorito.to_dict()
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/favoritos/<int:id>', methods=['DELETE'])
+def delete_favorito(id: int):
+    try:
+        favorito = Favorito.query.get_or_404(id)
+        db.session.delete(favorito)
+        db.session.commit()
+        return jsonify({'message': 'Eliminado de favoritos'}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
@@ -651,6 +868,250 @@ def get_dashboard_stats():
         return jsonify({'error': str(e)}), 500
 
 
+# ==================== RUTAS - AMARRES ====================
+
+@app.route('/api/amarres', methods=['GET'])
+def get_amarres():
+    """Obtener todos los amarres con filtro opcional de estado o propietario"""
+    try:
+        estado = request.args.get('estado')
+        propietario_id = request.args.get('propietario_id')
+        query = Amarre.query
+        
+        if estado:
+            query = query.filter_by(estado=estado)
+        if propietario_id:
+            query = query.filter_by(propietario_id=propietario_id)
+            
+        amarres = query.order_by(Amarre.fila, Amarre.numero).all()
+        return jsonify([a.to_dict() for a in amarres]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/amarres/<int:id>/alquilar', methods=['POST'])
+@token_required
+def alquilar_amarre(id):
+    """Permite alquilar un amarre a un capitán por meses"""
+    try:
+        data = request.get_json()
+        meses = data.get('meses', 1)
+        propietario_id = data.get('propietario_id')
+        
+        if not propietario_id:
+            return jsonify({'error': 'Propietario ID es requerido'}), 400
+            
+        amarre = Amarre.query.get_or_404(id)
+        
+        if amarre.estado == 'ocupado':
+            return jsonify({'error': 'El amarre ya está ocupado'}), 400
+            
+        amarre.estado = 'ocupado'
+        amarre.propietario_id = propietario_id
+        embarcacion_id = data.get('embarcacion_id')
+        if embarcacion_id:
+            amarre.embarcacion_id = int(embarcacion_id)
+        amarre.fecha_fin_alquiler = datetime.utcnow() + timedelta(days=30 * int(meses))
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': f'Amarre alquilado exitosamente por {meses} meses',
+            'amarre': amarre.to_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/amarres/<int:id>/liberar', methods=['POST'])
+@token_required
+def liberar_amarre(id):
+    """Permite liberar un amarre ocupado"""
+    try:
+        amarre = Amarre.query.get_or_404(id)
+        
+        if amarre.estado == 'disponible':
+            return jsonify({'error': 'El amarre ya está disponible'}), 400
+            
+        amarre.estado = 'disponible'
+        amarre.propietario_id = None
+        amarre.embarcacion_id = None
+        amarre.fecha_fin_alquiler = None
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Amarre liberado exitosamente',
+            'amarre': amarre.to_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/amarres', methods=['POST'])
+def create_amarre():
+    """Crear nuevo amarre (solo admin)"""
+    try:
+        data = request.get_json()
+        amarre = Amarre(
+            codigo=data['codigo'],
+            muelle=data.get('muelle', 'Principal'),
+            fila=data.get('fila'),
+            numero=data.get('numero'),
+            longitud_max=data.get('longitud_max'),
+            manga_max=data.get('manga_max'),
+            calado_max=data.get('calado_max'),
+            precio_mes=data.get('precio_mes', 0.0),
+            estado=data.get('estado', 'disponible'),
+            embarcacion_id=data.get('embarcacion_id'),
+            notas=data.get('notas'),
+        )
+        db.session.add(amarre)
+        db.session.commit()
+        return jsonify({'message': 'Amarre creado', 'amarre': amarre.to_dict()}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/amarres/<int:id>', methods=['PUT'])
+def update_amarre(id: int):
+    """Actualizar estado u otros campos de un amarre"""
+    try:
+        amarre = Amarre.query.get_or_404(id)
+        data = request.get_json()
+        updatable = ['estado', 'embarcacion_id', 'notas', 'precio_mes', 'longitud_max', 'manga_max', 'calado_max']
+        for field in updatable:
+            if field in data:
+                setattr(amarre, field, data[field])
+        db.session.commit()
+        return jsonify({'message': 'Amarre actualizado', 'amarre': amarre.to_dict()}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+# ==================== RUTAS - MENSAJES ====================
+
+@app.route('/api/mensajes/contactos', methods=['GET'])
+def get_contactos():
+    """Obtiene la lista de contactos (historial de chats) o lista de capitanes si es cliente nuevo"""
+    try:
+        usuario_id = int(request.args.get('usuario_id'))
+        if not usuario_id:
+            return jsonify({'error': 'usuario_id requerido'}), 400
+
+        usuario = Usuario.query.get(usuario_id)
+        if not usuario:
+            return jsonify({'error': 'Usuario no encontrado'}), 404
+
+        # Buscar todos los usuarios con los que ha intercambiado mensajes
+        mensajes = Mensaje.query.filter(
+            (Mensaje.remitente_id == usuario_id) | (Mensaje.destinatario_id == usuario_id)
+        ).all()
+        
+        contactos_ids = set()
+        for m in mensajes:
+            if m.remitente_id != usuario_id:
+                contactos_ids.add(m.remitente_id)
+            if m.destinatario_id != usuario_id:
+                contactos_ids.add(m.destinatario_id)
+                
+        contactos = Usuario.query.filter(Usuario.id.in_(contactos_ids)).all()
+        
+        # Si es cliente y no tiene contactos, al menos mostrarle los capitanes para que pueda iniciar chat
+        if usuario.rol == 'cliente' and not contactos:
+            contactos = Usuario.query.filter(Usuario.rol == 'capitan').all()
+            
+        # Si es capitan y no tiene contactos, mostrar otros capitanes o nada
+        if usuario.rol == 'capitan' and not contactos:
+            contactos = []
+
+        return jsonify([c.to_dict() for c in contactos]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/mensajes/<int:contacto_id>', methods=['GET'])
+def get_mensajes_con_contacto(contacto_id: int):
+    """Obtiene el historial de chat entre el usuario actual y el contacto."""
+    try:
+        usuario_id = int(request.args.get('usuario_id'))
+        if not usuario_id:
+            return jsonify({'error': 'usuario_id requerido'}), 400
+
+        # Marcar mensajes como leídos
+        mensajes_no_leidos = Mensaje.query.filter_by(
+            remitente_id=contacto_id, 
+            destinatario_id=usuario_id, 
+            leido=False
+        ).all()
+        for m in mensajes_no_leidos:
+            m.leido = True
+        if mensajes_no_leidos:
+            db.session.commit()
+
+        mensajes = Mensaje.query.filter(
+            ((Mensaje.remitente_id == usuario_id) & (Mensaje.destinatario_id == contacto_id)) |
+            ((Mensaje.remitente_id == contacto_id) & (Mensaje.destinatario_id == usuario_id))
+        ).order_by(Mensaje.fecha_envio.asc()).all()
+
+        return jsonify([m.to_dict() for m in mensajes]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/mensajes', methods=['POST'])
+def send_mensaje():
+    """Enviar un nuevo mensaje"""
+    try:
+        data = request.get_json()
+        remitente_id = data.get('remitente_id')
+        destinatario_id = data.get('destinatario_id')
+        contenido = data.get('contenido')
+        
+        if not remitente_id or not destinatario_id or not contenido:
+            return jsonify({'error': 'Faltan datos obligatorios'}), 400
+            
+        mensaje = Mensaje(
+            remitente_id=remitente_id,
+            destinatario_id=destinatario_id,
+            contenido=contenido
+        )
+        db.session.add(mensaje)
+        db.session.commit()
+        return jsonify({'message': 'Mensaje enviado', 'mensaje': mensaje.to_dict()}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+# ==================== STRIPE PAGOS ====================
+
+@app.route('/api/pagos/create-intent', methods=['POST'])
+def create_payment_intent():
+    try:
+        data = request.json
+        # Convertir a centavos para Stripe
+        amount = int(data.get('amount', 0) * 100)
+        
+        intent = stripe.PaymentIntent.create(
+            amount=amount,
+            currency='usd',
+            setup_future_usage='off_session',
+            automatic_payment_methods={
+                'enabled': True,
+            },
+        )
+        return jsonify({
+            'clientSecret': intent.client_secret
+        })
+    except Exception as e:
+        return jsonify(error=str(e)), 400
+
+
 # ==================== INICIALIZACIÓN ====================
 
 @app.route('/api/health', methods=['GET'])
@@ -663,5 +1124,28 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         print("✅ Base de datos inicializada")
-    
+
+        # Seed de amarres si no existen
+        if Amarre.query.count() == 0:
+            filas = ['A', 'B', 'C']
+            precios = {'A': 450.0, 'B': 380.0, 'C': 310.0}
+            longitudes = {'A': 15.0, 'B': 12.0, 'C': 9.0}
+            for fila in filas:
+                for num in range(1, 9):
+                    codigo = f"{fila}-{num:02d}"
+                    amarre = Amarre(
+                        codigo=codigo,
+                        muelle='Principal',
+                        fila=fila,
+                        numero=num,
+                        longitud_max=longitudes[fila],
+                        manga_max=4.0,
+                        calado_max=2.5,
+                        precio_mes=precios[fila],
+                        estado='disponible',
+                    )
+                    db.session.add(amarre)
+            db.session.commit()
+            print(f"✅ {24} amarres creados automáticamente")
+
     app.run(debug=True, port=5000)

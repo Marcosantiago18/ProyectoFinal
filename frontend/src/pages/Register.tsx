@@ -1,6 +1,10 @@
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contex/AuthContext';
+import Navbar from '../components/shared/Navbar';
+import Footer from '../components/shared/Footer';
+import CustomSelect from '../components/shared/CustomSelect';
 import { toast } from 'sonner';
 
 import { useLanguage } from '../contex/LanguageContext';
@@ -15,6 +19,7 @@ const Register: React.FC = () => {
         telefono: '',
         password: '',
         confirmPassword: '',
+        rol: 'cliente',
     });
     const [loading, setLoading] = useState(false);
 
@@ -34,9 +39,14 @@ const Register: React.FC = () => {
                 email: formData.email,
                 telefono: formData.telefono,
                 password: formData.password,
+                rol: formData.rol,
             });
             toast.success(t('register_success'));
-            navigate('/dashboard');
+            if (formData.rol === 'capitan') {
+                navigate('/dashboard');
+            } else {
+                navigate('/');
+            }
         } catch (error: any) {
             toast.error(error.message || t('register_error'));
         } finally {
@@ -45,8 +55,18 @@ const Register: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#0a1628] flex items-center justify-center p-6">
-            <div className="w-full max-w-md">
+        <div className="min-h-screen relative flex items-center justify-center p-6 overflow-hidden">
+            {/* Background Image */}
+            <div className="absolute inset-0 w-full h-full z-0">
+                <img
+                    alt="Luxury yacht background"
+                    className="object-cover w-full h-full brightness-50"
+                    src="https://images.unsplash.com/photo-1540946485063-a40da27545f8?q=80&w=2070&auto=format&fit=crop"
+                />
+                <div className="absolute inset-0 bg-linear-to-tr from-navy-deep/90 via-navy-deep/60 to-background-dark/80"></div>
+            </div>
+
+            <div className="w-full max-w-md relative z-10">
                 {/* Logo */}
                 <div className="text-center mb-8">
                     <Link to="/" className="inline-flex items-center gap-3 mb-4">
@@ -96,6 +116,18 @@ const Register: React.FC = () => {
                                 onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
                                 className="input"
                                 placeholder="+1 (555) 000-0000"
+                            />
+                        </div>
+                        
+                        <div>
+                            <label className="text-white/80 text-sm mb-2 block">Rol de Usuario</label>
+                            <CustomSelect
+                                value={formData.rol}
+                                onChange={(value) => setFormData({ ...formData, rol: value })}
+                                options={[
+                                    { value: 'cliente', label: 'Cliente' },
+                                    { value: 'capitan', label: 'Capitán' }
+                                ]}
                             />
                         </div>
 

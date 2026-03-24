@@ -68,13 +68,19 @@ const FeaturedFleet: React.FC<FeaturedFleetProps> = ({ embarcaciones, loading })
                                     <div className="flex justify-between items-start mb-2">
                                         <div>
                                             <h4 className="text-xl font-medium text-slate-900 dark:text-white mb-1">{boat.nombre}</h4>
+                                            {boat.propietario_nombre && (
+                                                <p className="text-xs text-gold-accent font-semibold mb-2 flex items-center gap-1">
+                                                    <span className="material-icons text-[12px]">verified_user</span> 
+                                                    {boat.propietario_nombre}
+                                                </p>
+                                            )}
                                             <div className="flex items-center text-slate-500 text-sm gap-3">
-                                                <span className="flex items-center gap-1"><span className="material-icons text-xs">straighten</span> {boat.longitud} ft</span>
+                                                <span className="flex items-center gap-1"><span className="material-icons text-xs">straighten</span> {boat.longitud} m</span>
                                                 <span className="flex items-center gap-1"><span className="material-icons text-xs">people</span> {boat.capacidad} {t('guests')}</span>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-1 text-gold-accent text-sm font-bold">
-                                            <span className="material-icons text-base">star</span> {boat.rating || 5.0}
+                                            <span className="material-icons text-base">star</span> {boat.rating > 0 ? boat.rating.toFixed(1) : 'Nuevo'}
                                         </div>
                                     </div>
                                     <div className="border-t border-slate-200 dark:border-slate-800 my-4"></div>

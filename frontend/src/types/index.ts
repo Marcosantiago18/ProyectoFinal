@@ -5,7 +5,7 @@ export interface Usuario {
     nombre: string;
     email: string;
     telefono?: string;
-    rol: 'cliente' | 'admin';
+    rol: 'cliente' | 'admin' | 'capitan';
     fecha_registro: string;
 }
 
@@ -24,6 +24,8 @@ export interface Embarcacion {
     incluye_tripulacion: boolean;
     ubicacion?: string;
     rating: number;
+    propietario_id?: number | null;
+    propietario_nombre?: string;
     fecha_creacion: string;
 }
 
@@ -76,7 +78,7 @@ export interface SearchFilters {
 export interface AuthContextType {
     usuario: Usuario | null;
     isAuthenticated: boolean;
-    login: (email: string, password: string) => Promise<void>;
+    login: (email: string, password: string) => Promise<Usuario>;
     logout: () => void;
     register: (data: RegisterData) => Promise<void>;
 }
@@ -86,4 +88,24 @@ export interface RegisterData {
     email: string;
     password: string;
     telefono?: string;
+    rol?: string;
+}
+
+export interface Amarre {
+    id: number;
+    codigo: string;
+    muelle: string;
+    fila: string;
+    numero: number;
+    longitud_max?: number;
+    manga_max?: number;
+    calado_max?: number;
+    precio_mes: number;
+    estado: 'disponible' | 'ocupado' | 'mantenimiento';
+    embarcacion_id?: number;
+    embarcacion_nombre?: string;
+    propietario_id?: number | null;
+    propietario_nombre?: string;
+    fecha_fin_alquiler?: string | null;
+    notas?: string;
 }

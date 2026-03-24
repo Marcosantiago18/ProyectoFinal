@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Usuario, AuthContextType, RegisterData } from '../types';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
+import type { Usuario, AuthContextType, RegisterData } from '../types';
 import { authAPI } from '../utils/api';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,7 +24,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     }, []);
 
-    const login = async (email: string, password: string): Promise<void> => {
+    const login = async (email: string, password: string): Promise<Usuario> => {
         try {
             const response: any = await authAPI.login(email, password);
 
@@ -33,6 +34,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             // Guardar en localStorage
             localStorage.setItem('usuario', JSON.stringify(response.usuario));
             localStorage.setItem('token', response.token);
+            
+            return response.usuario;
         } catch (error) {
             console.error('Error en login:', error);
             throw error;

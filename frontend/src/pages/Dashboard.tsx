@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contex/AuthContext';
 import { useLanguage } from '../contex/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
-import type { DashboardStats, Embarcacion, Reserva, Mantenimiento } from '../types';
-import { dashboardAPI, embarcacionesAPI, reservasAPI, mantenimientosAPI } from '../utils/api';
+import type { DashboardStats, Embarcacion, Reserva, Mantenimiento, Amarre } from '../types';
+import { dashboardAPI, embarcacionesAPI, reservasAPI, mantenimientosAPI, amarresAPI } from '../utils/api';
 import { toast } from 'sonner';
+import ChatInterface from '../components/chat/ChatInterface';
+import CustomSelect from '../components/shared/CustomSelect';
 
 const Dashboard: React.FC = () => {
     const { usuario, logout } = useAuth();
@@ -14,7 +16,7 @@ const Dashboard: React.FC = () => {
     // Helper para claves dinámicas (tipo_preventivo, estado_programado, ...)
     const tKey = (key: string) => t(key as TranslationKey) || key;
 
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'fleet' | 'bookings' | 'maintenance' | 'analytics' | 'messages'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'fleet' | 'bookings' | 'maintenance' | 'analytics' | 'messages' | 'marina'>('dashboard');
     const [showVesselForm, setShowVesselForm] = useState(false);
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [embarcaciones, setEmbarcaciones] = useState<Embarcacion[]>([]);
@@ -24,9 +26,14 @@ const Dashboard: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [showMaintenanceForm, setShowMaintenanceForm] = useState(false);
     const [editingVessel, setEditingVessel] = useState<Embarcacion | null>(null);
+    const [amarres, setAmarres] = useState<Amarre[]>([]);
+    const [selectedAmarre, setSelectedAmarre] = useState<Amarre | null>(null);
+    const [rentModal, setRentModal] = useState<{ isOpen: boolean; amarreId: number | null }>({ isOpen: false, amarreId: null });
+    const [rentMonths, setRentMonths] = useState(1);
+    const [rentVesselId, setRentVesselId] = useState<number | ''>('');
 
     useEffect(() => {
-        if (usuario?.rol !== 'admin') {
+        if (!usuario || (usuario.rol !== 'admin' && usuario.rol !== 'capitan')) {
             toast.error('Acceso denegado');
             navigate('/');
             return;
@@ -37,12 +44,17 @@ const Dashboard: React.FC = () => {
     const loadDashboardData = async () => {
         try {
             const token = localStorage.getItem('token') || '';
-            const [statsData, embarcacionesData, reservasData, mantenimientosData, alertasData]: any = await Promise.all([
+            
+            // Si el usuario es capitán, solo obtener sus embarcaciones
+            const embarcacionesParams = usuario?.rol === 'capitan' ? { propietario_id: usuario.id } : {};
+
+            const [statsData, embarcacionesData, reservasData, mantenimientosData, alertasData, amarresData]: any = await Promise.all([
                 dashboardAPI.getStats(token),
-                embarcacionesAPI.getAll(),
+                embarcacionesAPI.getAll(embarcacionesParams),
                 reservasAPI.getAll({}, token),
                 mantenimientosAPI.getAll({}, token),
                 mantenimientosAPI.getAlertas(),
+                amarresAPI.getAll(),
             ]);
 
             setStats(statsData);
@@ -50,6 +62,7 @@ const Dashboard: React.FC = () => {
             setReservas(reservasData);
             setMantenimientos(mantenimientosData);
             setAlertas(alertasData);
+            setAmarres(Array.isArray(amarresData) ? amarresData : []);
         } catch (error) {
             console.error('Error cargando dashboard:', error);
             toast.error(t('error_loading_data') || 'Error loading data');
@@ -104,6 +117,17 @@ const Dashboard: React.FC = () => {
         setShowVesselForm(true);
     };
 
+    const handleUpdateVesselState = async (id: number, estado: string) => {
+        try {
+            const token = localStorage.getItem('token') || '';
+            await embarcacionesAPI.update(id, { estado }, token);
+            toast.success(`Estado actualizado a ${estado.replace('_', ' ')}`);
+            loadDashboardData();
+        } catch (error) {
+            toast.error('Error al actualizar el estado de la embarcación');
+        }
+    };
+
     const handleDeleteVessel = async (id: number) => {
         if (!window.confirm(t('confirm_delete') || 'Are you sure you want to delete this vessel?')) return;
 
@@ -122,6 +146,19 @@ const Dashboard: React.FC = () => {
         e.preventDefault();
         const form = e.target as HTMLFormElement;
         const formData = new FormData(form);
+
+        if (usuario?.rol === 'capitan') {
+            formData.append('propietario_id', usuario.id.toString());
+        }
+
+        // Explicitly handle checkboxes since FormData omits unchecked ones
+        const formElement = e.currentTarget;
+        const inputs = Array.from(formElement.querySelectorAll('input[type="checkbox"]')) as HTMLInputElement[];
+        inputs.forEach(input => {
+            if (!input.checked) {
+                formData.append(input.name, 'false');
+            }
+        });
 
         try {
             const token = localStorage.getItem('token') || '';
@@ -254,6 +291,17 @@ const Dashboard: React.FC = () => {
                     </button>
 
                     <button
+                        onClick={() => setActiveTab('marina')}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${activeTab === 'marina' ? 'bg-[#d4af37] text-[#0a1628]' : 'text-white/60 hover:bg-white/5'
+                            }`}
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                        </svg>
+                        <span className="font-semibold">{t('marina_tab') || 'Marina'}</span>
+                    </button>
+
+                    <button
                         onClick={() => setActiveTab('analytics')}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${activeTab === 'analytics' ? 'bg-[#d4af37] text-[#0a1628]' : 'text-white/60 hover:bg-white/5'
                             }`}
@@ -349,7 +397,7 @@ const Dashboard: React.FC = () => {
                                         <div>
                                             <p className="text-white/60 text-sm uppercase mb-1">{t('total_revenue')}</p>
                                             <p className="text-white text-3xl font-bold">
-                                                ${stats?.total_revenue.toLocaleString()}
+                                                ${reservas.filter(r => ['confirmada', 'en_curso', 'completada'].includes(r.estado)).reduce((acc, r) => acc + (r.precio_total || 0), 0).toLocaleString()}
                                             </p>
                                         </div>
                                         <div className="w-14 h-14 bg-[#d4af37]/20 rounded-xl flex items-center justify-center">
@@ -359,14 +407,14 @@ const Dashboard: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 text-[#10b981] text-sm">
-                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clipRule="evenodd" />
+                                        <svg className="w-4 h-4" transform="rotate(-45)" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" />
                                         </svg>
-                                        <span>+12.5%</span>
+                                        <span>Actualizado</span>
                                     </div>
-                                    <div className="mt-4 flex gap-1">
-                                        {[40, 60, 45, 70, 55, 80, 65].map((height, i) => (
-                                            <div key={i} className="flex-1 bg-[#d4af37]/20 rounded-sm" style={{ height: `${height}%` }}></div>
+                                    <div className="mt-4 flex gap-1 h-2">
+                                        {[40, 60, 45, 70, 55, 80, 100].map((height, i) => (
+                                            <div key={i} className="flex-1 bg-[#d4af37]/40 rounded-sm" style={{ height: `${height}%` }}></div>
                                         ))}
                                     </div>
                                 </div>
@@ -376,7 +424,7 @@ const Dashboard: React.FC = () => {
                                         <div>
                                             <p className="text-white/60 text-sm uppercase mb-1">{t('active_charters')}</p>
                                             <p className="text-white text-3xl font-bold">
-                                                {stats?.active_charters} <span className="text-white/40 text-lg">/ {stats?.total_charters}</span>
+                                                {embarcaciones.filter(e => e.estado === 'en_charter').length} <span className="text-white/40 text-lg">/ {embarcaciones.length}</span>
                                             </p>
                                         </div>
                                         <div className="w-14 h-14 bg-blue-500/20 rounded-xl flex items-center justify-center">
@@ -386,8 +434,17 @@ const Dashboard: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <div className="w-3 h-3 bg-[#10b981] rounded-full"></div>
-                                        <span className="text-white/80 text-sm">{t('currently_at_sea')}</span>
+                                        {embarcaciones.filter(e => e.estado === 'en_charter').length > 0 ? (
+                                            <>
+                                                <div className="w-3 h-3 bg-[#10b981] rounded-full animate-pulse"></div>
+                                                <span className="text-white/80 text-sm">Navegando ahora</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="w-3 h-3 bg-white/20 rounded-full"></div>
+                                                <span className="text-white/40 text-sm">Flota en puerto</span>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
 
@@ -395,7 +452,7 @@ const Dashboard: React.FC = () => {
                                     <div className="flex items-center justify-between mb-4">
                                         <div>
                                             <p className="text-white/60 text-sm uppercase mb-1">{t('new_inquiries')}</p>
-                                            <p className="text-white text-3xl font-bold">{stats?.new_inquiries}</p>
+                                            <p className="text-white text-3xl font-bold">{reservas.filter(r => r.estado === 'pendiente').length}</p>
                                         </div>
                                         <div className="w-14 h-14 bg-[#f59e0b]/20 rounded-xl flex items-center justify-center">
                                             <svg className="w-7 h-7 text-[#f59e0b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -404,8 +461,16 @@ const Dashboard: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <div className="text-white/80 text-sm">Wedding Event <span className="text-white/40">2m ago</span></div>
-                                        <div className="text-white/80 text-sm">Weekend Rental <span className="text-white/40">1h ago</span></div>
+                                        {reservas.filter(r => r.estado === 'pendiente').slice(0, 2).map((req, i) => {
+                                            const diffMin = Math.round((new Date().getTime() - new Date(req.fecha_creacion).getTime()) / 60000);
+                                            const timeStr = diffMin < 60 ? `Hace ${diffMin}m` : (diffMin < 1440 ? `Hace ${Math.round(diffMin/60)}h` : `Hace ${Math.round(diffMin/1440)}d`);
+                                            return (
+                                                <div key={i} className="text-white/80 text-sm capitalize">{req.tipo_evento || 'Alquiler'} <span className="text-white/40 ml-1">{timeStr}</span></div>
+                                            );
+                                        })}
+                                        {reservas.filter(r => r.estado === 'pendiente').length === 0 && (
+                                            <div className="text-white/40 text-sm italic">Sin consultas recientes</div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -430,52 +495,56 @@ const Dashboard: React.FC = () => {
                                                 <th className="text-left text-white/60 text-sm font-semibold pb-4 uppercase">{t('vessel_type')}</th>
                                                 <th className="text-left text-white/60 text-sm font-semibold pb-4 uppercase">{t('status')}</th>
                                                 <th className="text-left text-white/60 text-sm font-semibold pb-4 uppercase">{t('next_booking')}</th>
-                                                <th className="text-right text-white/60 text-sm font-semibold pb-4 uppercase">{t('action')}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {embarcaciones.slice(0, 4).map((embarcacion) => (
-                                                <tr key={embarcacion.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                                                    <td className="py-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <img
-                                                                src={embarcacion.imagen_url || 'https://images.unsplash.com/photo-1567899378494-47b22a2ae96a?w=100'}
-                                                                alt={embarcacion.nombre}
-                                                                className="w-12 h-12 rounded-lg object-cover"
-                                                            />
-                                                            <div>
-                                                                <p className="text-white font-semibold">{embarcacion.nombre}</p>
-                                                                <p className="text-white/60 text-sm">{embarcacion.longitud}ft • {embarcacion.ubicacion}</p>
+                                            {(() => {
+                                                const sorted = [...embarcaciones].sort((a, b) => {
+                                                    const nextA = reservas.filter(r => r.embarcacion_id === a.id && new Date(r.fecha_inicio) > new Date()).sort((r1,r2) => new Date(r1.fecha_inicio).getTime() - new Date(r2.fecha_inicio).getTime())[0];
+                                                    const nextB = reservas.filter(r => r.embarcacion_id === b.id && new Date(r.fecha_inicio) > new Date()).sort((r1,r2) => new Date(r1.fecha_inicio).getTime() - new Date(r2.fecha_inicio).getTime())[0];
+                                                    if (nextA && !nextB) return -1;
+                                                    if (!nextA && nextB) return 1;
+                                                    if (nextA && nextB) return new Date(nextA.fecha_inicio).getTime() - new Date(nextB.fecha_inicio).getTime();
+                                                    return 0;
+                                                });
+                                                return sorted.map((embarcacion) => {
+                                                    const nextBooking = reservas.filter(r => r.embarcacion_id === embarcacion.id && new Date(r.fecha_inicio) > new Date()).sort((a,b) => new Date(a.fecha_inicio).getTime() - new Date(b.fecha_inicio).getTime())[0];
+                                                    return (
+                                                    <tr key={embarcacion.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                                        <td className="py-2 pr-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <img
+                                                                    src={embarcacion.imagen_url || 'https://images.unsplash.com/photo-1567899378494-47b22a2ae96a?w=100'}
+                                                                    alt={embarcacion.nombre}
+                                                                    className="w-10 h-10 rounded-lg object-cover"
+                                                                />
+                                                                <div>
+                                                                    <p className="text-white font-semibold text-sm">{embarcacion.nombre}</p>
+                                                                    <p className="text-white/60 text-xs">{embarcacion.longitud}m • {embarcacion.ubicacion}</p>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-4">
-                                                        <span className="text-white/80 capitalize">{t(`type_${embarcacion.tipo}`) || embarcacion.tipo}</span>
-                                                    </td>
-                                                    <td className="py-4">
-                                                        <span className={`badge ${getStatusBadge(embarcacion.estado)}`}>
-                                                            {t(`${embarcacion.estado}_status`) || embarcacion.estado.replace('_', ' ')}
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-4">
-                                                        <span className="text-white/80">Oct 24, 2023</span>
-                                                    </td>
-                                                    <td className="py-4 text-right">
-                                                        <button
-                                                            onClick={() => handleEditVessel(embarcacion)}
-                                                            className="px-4 py-2 bg-[#d4af37] text-[#0a1628] rounded-lg font-semibold hover:bg-[#f4d03f] transition-colors mr-2"
-                                                        >
-                                                            {t('edit') || 'Edit'}
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteVessel(embarcacion.id)}
-                                                            className="px-4 py-2 bg-red-500/20 text-red-500 rounded-lg font-semibold hover:bg-red-500/40 transition-colors"
-                                                        >
-                                                            {t('delete') || 'Delete'}
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                                        </td>
+                                                        <td className="py-2 pr-4">
+                                                            <span className="text-white/80 text-sm capitalize">{t(`type_${embarcacion.tipo}`) || embarcacion.tipo}</span>
+                                                        </td>
+                                                        <td className="py-2 pr-4 max-w-[140px]">
+                                                                <CustomSelect
+                                                                    size="sm"
+                                                                    value={embarcacion.estado}
+                                                                    onChange={(val) => handleUpdateVesselState(embarcacion.id, val)}
+                                                                    options={[
+                                                                        { value: 'disponible', label: 'DISPONIBLE' },
+                                                                        { value: 'en_charter', label: 'EN CHARTER' },
+                                                                        { value: 'mantenimiento', label: 'MANTENIMIENTO' }
+                                                                    ]}
+                                                                />
+                                                        </td>
+                                                        <td className="py-2">
+                                                            <span className="text-white/80 text-sm">{nextBooking ? formatDate(nextBooking.fecha_inicio) : 'Sin reservas activas'}</span>
+                                                        </td>
+                                                    </tr>
+                                                )});
+                                            })()}
                                         </tbody>
                                     </table>
                                 </div>
@@ -544,52 +613,77 @@ const Dashboard: React.FC = () => {
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {/* Calendar */}
                                 <div className="glass-effect rounded-2xl p-6">
-                                    <h3 className="text-xl font-bold text-white mb-6">October 2023</h3>
+                                    <h3 className="text-xl font-bold text-white mb-6 capitalize px-2">
+                                        {new Date().toLocaleString('es-ES', { month: 'long', year: 'numeric' })}
+                                    </h3>
                                     <div className="grid grid-cols-7 gap-2 mb-4">
-                                        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                                        {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((day, i) => (
                                             <div key={i} className="text-center text-white/40 text-sm font-semibold">
                                                 {day}
                                             </div>
                                         ))}
                                     </div>
                                     <div className="grid grid-cols-7 gap-2">
-                                        {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-                                            <button
-                                                key={day}
-                                                className={`aspect-square rounded-lg flex items-center justify-center text-sm transition-colors ${day === 24
-                                                    ? 'bg-[#d4af37] text-[#0a1628] font-bold'
-                                                    : 'text-white/80 hover:bg-white/5'
-                                                    }`}
-                                            >
-                                                {day}
-                                            </button>
-                                        ))}
+                                        {(() => {
+                                            const actualDate = new Date();
+                                            const currentYear = actualDate.getFullYear();
+                                            const currentMonth = actualDate.getMonth();
+                                            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+                                            const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
+                                            const startPadding = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1; 
+                                            
+                                            // Empty padding cells
+                                            const pads = Array.from({ length: startPadding }).map((_, i) => <div key={`pad-${i}`} />);
+                                            
+                                            // Real days
+                                            const days = Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
+                                                const hasReservation = reservas.some(r => {
+                                                    if (!['pendiente', 'confirmada', 'en_curso'].includes(r.estado)) return false;
+                                                    let c = new Date(); c.setFullYear(currentYear, currentMonth, day); c.setHours(12,0,0,0);
+                                                    let s = new Date(r.fecha_inicio); s.setHours(12,0,0,0);
+                                                    let e = new Date(r.fecha_fin); e.setHours(12,0,0,0);
+                                                    return c >= s && c <= e;
+                                                });
+                                                return (
+                                                    <button
+                                                        key={day}
+                                                        className={`aspect-square rounded-lg flex items-center justify-center text-sm transition-colors ${hasReservation
+                                                            ? 'bg-[#d4af37] text-[#0a1628] font-bold ring-2 ring-[#f4d03f]/50'
+                                                            : 'text-white/80 hover:bg-white/5'
+                                                            }`}
+                                                    >
+                                                        {day}
+                                                    </button>
+                                                );
+                                            });
+                                            return [...pads, ...days];
+                                        })()}
                                     </div>
                                 </div>
 
                                 {/* Messages */}
-                                <div className="glass-effect rounded-2xl p-6">
+                                <div className="glass-effect rounded-2xl p-6 flex flex-col h-full">
                                     <div className="flex items-center justify-between mb-6">
-                                        <h3 className="text-xl font-bold text-white">{t('messages_title') || 'Messages'}</h3>
-                                        <button className="text-blue-500 hover:text-[#00d4ff] transition-colors">
-                                            Compose
-                                        </button>
+                                        <h3 className="text-xl font-bold text-white">Solicitudes ({reservas.filter(r => r.estado === 'pendiente').length})</h3>
                                     </div>
-                                    <div className="space-y-4">
-                                        {[
-                                            { name: 'Elena Fisher', message: 'Is the Golden Horizon available for...', time: '10m', avatar: 'EF' },
-                                            { name: 'John Smith', message: 'Confirmed booking for the jet ski...', time: '2h', avatar: 'JS' },
-                                            { name: 'Mike Ross', message: 'Regarding the maintenance...', time: '5h', avatar: 'MR' },
-                                        ].map((msg, i) => (
-                                            <div key={i} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer">
-                                                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-[#00d4ff] rounded-full flex items-center justify-center flex-shrink-0">
-                                                    <span className="text-white font-bold text-sm">{msg.avatar}</span>
+                                    <div className="space-y-4 flex-1 overflow-y-auto pr-2 min-h-[350px] max-h-[500px]">
+                                        {reservas.filter(r => r.estado === 'pendiente').length === 0 ? (
+                                            <p className="text-white/60 text-sm italic">No hay solicitudes pendientes actuales.</p>
+                                        ) : reservas.filter(r => r.estado === 'pendiente').map((req, i) => (
+                                            <div key={i} onClick={() => setActiveTab('bookings')} className="flex flex-col gap-3 p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer border-l-4 border-orange-400">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                                        <span className="text-white font-bold text-sm">RQ</span>
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-white font-semibold text-sm">Alquiler de {req.embarcacion_nombre}</p>
+                                                        <p className="text-white/60 text-xs truncate">{req.usuario_nombre} del {formatDate(req.fecha_inicio)} al {formatDate(req.fecha_fin)}</p>
+                                                    </div>
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-white font-semibold text-sm">{msg.name}</p>
-                                                    <p className="text-white/60 text-sm truncate">{msg.message}</p>
+                                                <div className="flex gap-2 justify-end mt-1 border-t border-white/5 pt-3">
+                                                    <button onClick={(e) => { e.stopPropagation(); handleUpdateBooking(req.id, 'confirmada'); }} className="px-4 py-1.5 bg-green-500/20 text-green-400 text-xs font-semibold rounded hover:bg-green-500/30">Aceptar</button>
+                                                    <button onClick={(e) => { e.stopPropagation(); handleUpdateBooking(req.id, 'cancelada'); }} className="px-4 py-1.5 bg-red-500/20 text-red-400 text-xs font-semibold rounded hover:bg-red-500/30">Rechazar</button>
                                                 </div>
-                                                <span className="text-white/40 text-xs">{msg.time}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -625,17 +719,17 @@ const Dashboard: React.FC = () => {
                                             className="input"
                                             required
                                         />
-                                        <select
+                                        <CustomSelect
                                             name="tipo"
                                             defaultValue={editingVessel?.tipo || 'yacht'}
-                                            className="input text-black"
-                                            required
-                                        >
-                                            <option value="yacht">{t('type_yacht')}</option>
-                                            <option value="sailboat">{t('type_sailboat')}</option>
-                                            <option value="catamaran">{t('type_catamaran')}</option>
-                                            <option value="watercraft">{t('type_watercraft')}</option>
-                                        </select>
+                                            options={[
+                                                { value: 'yacht', label: t('type_yacht') },
+                                                { value: 'sailboat', label: t('type_sailboat') },
+                                                { value: 'catamaran', label: t('type_catamaran') },
+                                                { value: 'watercraft', label: t('type_watercraft') }
+                                            ]}
+                                            className="w-full text-sm"
+                                        />
                                         <input
                                             type="number"
                                             name="capacidad"
@@ -660,6 +754,37 @@ const Dashboard: React.FC = () => {
                                             className="input"
                                             required
                                         />
+                                        <input
+                                            type="text"
+                                            name="ubicacion"
+                                            defaultValue={editingVessel?.ubicacion}
+                                            placeholder={t('location_label') || 'Location'}
+                                            className="input"
+                                            required
+                                        />
+
+                                        <div className="md:col-span-2 flex gap-6 mt-2 mb-2">
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    name="incluye_capitan"
+                                                    value="true"
+                                                    defaultChecked={editingVessel?.incluye_capitan}
+                                                    className="w-4 h-4 rounded bg-white/10 border-white/20 text-[#d4af37] focus:ring-[#d4af37]"
+                                                />
+                                                <span className="text-white/80 text-sm">{t('with_captain') || 'Con capitán'}</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    name="incluye_tripulacion"
+                                                    value="true"
+                                                    defaultChecked={editingVessel?.incluye_tripulacion}
+                                                    className="w-4 h-4 rounded bg-white/10 border-white/20 text-[#d4af37] focus:ring-[#d4af37]"
+                                                />
+                                                <span className="text-white/80 text-sm">{t('crew_included') || 'Con tripulación'}</span>
+                                            </label>
+                                        </div>
 
                                         {/* File Input for Image */}
                                         <div className="md:col-span-1">
@@ -708,7 +833,7 @@ const Dashboard: React.FC = () => {
                                         />
                                         <div className="p-4">
                                             <h4 className="text-white font-bold mb-2">{embarcacion.nombre}</h4>
-                                            <p className="text-white/60 text-sm mb-3">{t(`type_${embarcacion.tipo}`)} • {embarcacion.longitud}ft</p>
+                                            <p className="text-white/60 text-sm mb-3">{t(`type_${embarcacion.tipo}`)} • {embarcacion.longitud}m</p>
                                             <div className="flex flex-col gap-3">
                                                 <div className="flex items-center justify-between">
                                                     <span className={`badge ${getStatusBadge(embarcacion.estado)}`}>
@@ -807,11 +932,15 @@ const Dashboard: React.FC = () => {
                     )}
 
                     {activeTab === 'maintenance' && (
-                        <div className="glass-effect rounded-2xl p-6">
+                        <div>
+                            {/* Header */}
                             <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-2xl font-bold text-white">{t('maintenance_schedule')}</h3>
+                                <div>
+                                    <h3 className="text-2xl font-bold text-white">{t('maintenance_schedule')}</h3>
+                                    <p className="text-white/50 text-sm mt-1">Gestiona y programa los servicios de tu flota</p>
+                                </div>
                                 <button
-                                    onClick={() => setShowMaintenanceForm(true)} // Needs state
+                                    onClick={() => setShowMaintenanceForm(!showMaintenanceForm)}
                                     className="px-4 py-2 bg-[#d4af37] text-[#0a1628] rounded-lg font-semibold hover:bg-[#f4d03f] transition-colors flex items-center gap-2"
                                 >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -821,72 +950,434 @@ const Dashboard: React.FC = () => {
                                 </button>
                             </div>
 
-                            {/* Maintenance Form Modal */}
+                            {/* Maintenance Form */}
                             {showMaintenanceForm && (
-                                <div className="mb-8 p-6 bg-white/5 rounded-xl border border-white/10">
-                                    <h4 className="text-xl font-bold text-white mb-4">{t('schedule_maintenance')}</h4>
+                                <div className="mb-8 p-6 glass-effect rounded-2xl border border-[#d4af37]/30">
+                                    <h4 className="text-xl font-bold text-white mb-5">{t('schedule_maintenance')}</h4>
                                     <form onSubmit={handleCreateMaintenance} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <select className="input text-black" name="embarcacion_id" required>
-                                            <option value="">{t('search_vessel')}</option>
-                                            {embarcaciones.map(e => (
-                                                <option key={e.id} value={e.id}>{e.nombre}</option>
-                                            ))}
-                                        </select>
-                                        <select className="input text-black" name="tipo" required>
-                                            <option value="preventivo">{t('tipo_preventivo')}</option>
-                                            <option value="correctivo">{t('tipo_correctivo')}</option>
-                                            <option value="revision">{t('tipo_revision')}</option>
-                                        </select>
-                                        <input type="date" className="input text-black" name="fecha" required />
-                                        <input type="number" placeholder={t('estimated_cost_label')} className="input" name="costo" />
-                                        <textarea placeholder={t('maintenance_desc_label')} className="input md:col-span-2" name="descripcion" rows={3}></textarea>
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-white/60 text-xs uppercase font-semibold">{t('search_vessel')}</label>
+                                            <CustomSelect
+                                                name="embarcacion_id"
+                                                options={[
+                                                    { value: '', label: t('search_vessel') },
+                                                    ...embarcaciones.map(e => ({ value: e.id.toString(), label: `${e.nombre} (${e.longitud}m)` }))
+                                                ]}
+                                                className="w-full text-sm z-50"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-white/60 text-xs uppercase font-semibold">{t('maintenance_type_label')}</label>
+                                            <CustomSelect
+                                                name="tipo"
+                                                defaultValue="preventivo"
+                                                options={[
+                                                    { value: 'preventivo', label: t('tipo_preventivo') },
+                                                    { value: 'correctivo', label: t('tipo_correctivo') },
+                                                    { value: 'revision', label: t('tipo_revision') }
+                                                ]}
+                                                className="w-full text-sm z-40"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-white/60 text-xs uppercase font-semibold">{t('scheduled_date_label')}</label>
+                                            <input
+                                                type="date"
+                                                className="bg-white/10 border border-white/20 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#d4af37] scheme-dark"
+                                                name="fecha"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-white/60 text-xs uppercase font-semibold">{t('estimated_cost_label')}</label>
+                                            <input
+                                                type="number"
+                                                placeholder="0.00"
+                                                className="bg-white/10 border border-white/20 rounded-lg px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-[#d4af37]"
+                                                name="costo"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1 md:col-span-2">
+                                            <label className="text-white/60 text-xs uppercase font-semibold">{t('maintenance_desc_label')}</label>
+                                            <textarea
+                                                placeholder={t('maintenance_desc_label')}
+                                                className="bg-white/10 border border-white/20 rounded-lg px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-[#d4af37] resize-none"
+                                                name="descripcion"
+                                                rows={3}
+                                            />
+                                        </div>
                                         <div className="md:col-span-2 flex justify-end gap-3">
-                                            <button type="button" onClick={() => setShowMaintenanceForm(false)} className="px-4 py-2 text-white hover:text-white/80">{t('cancel')}</button>
+                                            <button type="button" onClick={() => setShowMaintenanceForm(false)} className="px-5 py-2 text-white/60 hover:text-white border border-white/20 rounded-lg transition-colors">{t('cancel')}</button>
                                             <button type="submit" className="btn btn-gold">{t('submit')}</button>
                                         </div>
                                     </form>
                                 </div>
                             )}
 
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead>
-                                        <tr className="border-b border-white/10">
-                                            <th className="text-left text-white/60 text-sm font-semibold pb-4 uppercase">{t('search_vessel')}</th>
-                                            <th className="text-left text-white/60 text-sm font-semibold pb-4 uppercase">{t('vessel_type')}</th>
-                                            <th className="text-left text-white/60 text-sm font-semibold pb-4 uppercase">{t('date')}</th>
-                                            <th className="text-left text-white/60 text-sm font-semibold pb-4 uppercase">{t('cost')}</th>
-                                            <th className="text-left text-white/60 text-sm font-semibold pb-4 uppercase">{t('status')}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {mantenimientos.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={5} className="py-8 text-center text-white/40">
-                                                    {t('no_maintenance')}
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            mantenimientos.map((mantenimiento) => (
-                                                <tr key={mantenimiento.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                                                    <td className="py-4 text-white font-medium">{mantenimiento.embarcacion_nombre}</td>
-                                                    <td className="py-4 text-white/80 capitalize">
-                                                        {tKey(`tipo_${mantenimiento.tipo}`)}
-                                                    </td>
-                                                    <td className="py-4 text-white/80">{formatDate(mantenimiento.fecha_programada)}</td>
-                                                    <td className="py-4 text-white/80">${mantenimiento.costo?.toLocaleString() || '0'}</td>
-                                                    <td className="py-4">
-                                                        <span className={`badge ${mantenimiento.estado === 'completado' ? 'badge-green' :
-                                                            mantenimiento.estado === 'en_proceso' ? 'badge-blue' : 'badge-orange'
-                                                            }`}>
-                                                            {tKey(`estado_${mantenimiento.estado}`)}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
+                            {/* Maintenance Cards */}
+                            {mantenimientos.length === 0 ? (
+                                <div className="glass-effect rounded-2xl p-16 text-center">
+                                    <svg className="w-16 h-16 text-white/20 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                    </svg>
+                                    <p className="text-white/40 text-lg">{t('no_maintenance')}</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                                    {mantenimientos.map((m) => (
+                                        <div
+                                            key={m.id}
+                                            className="glass-effect rounded-2xl p-5 border border-white/10 hover:border-white/20 transition-all"
+                                        >
+                                            {/* Card Header */}
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                                                        m.estado === 'completado' ? 'bg-green-500/20' :
+                                                        m.estado === 'en_proceso' ? 'bg-blue-500/20' : 'bg-orange-500/20'
+                                                    }`}>
+                                                        <svg className={`w-5 h-5 ${
+                                                            m.estado === 'completado' ? 'text-green-400' :
+                                                            m.estado === 'en_proceso' ? 'text-blue-400' : 'text-orange-400'
+                                                        }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        </svg>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-white font-bold text-sm">{tKey(`tipo_${m.tipo}`)}</p>
+                                                        <p className="text-white/50 text-xs">{m.embarcacion_nombre}</p>
+                                                    </div>
+                                                </div>
+                                                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                                                    m.estado === 'completado' ? 'bg-green-500/20 text-green-400' :
+                                                    m.estado === 'en_proceso' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'
+                                                }`}>
+                                                    {tKey(`estado_${m.estado}`)}
+                                                </span>
+                                            </div>
+
+                                            {/* Description */}
+                                            {m.descripcion && (
+                                                <p className="text-white/70 text-sm mb-3 line-clamp-2">{m.descripcion}</p>
+                                            )}
+
+                                            {/* Footer info */}
+                                            <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                                                <span className="text-white/40 text-xs">{t('maintenance_requested') || 'Programado'}: {formatDate(m.fecha_programada)}</span>
+                                                {m.costo && m.costo > 0 && (
+                                                    <span className="text-[#d4af37] text-xs font-semibold">${m.costo.toLocaleString()}</span>
+                                                )}
+                                            </div>
+
+                                            {/* Action buttons */}
+                                            {m.estado !== 'completado' && (
+                                                <div className="mt-3 flex gap-2">
+                                                    {m.estado === 'programado' && (
+                                                        <button
+                                                            onClick={async () => {
+                                                                const token = localStorage.getItem('token') || '';
+                                                                await mantenimientosAPI.update(m.id, { estado: 'en_proceso' }, token);
+                                                                loadDashboardData();
+                                                            }}
+                                                            className="flex-1 py-2 bg-blue-500/20 text-blue-400 rounded-lg text-xs font-semibold hover:bg-blue-500/40 transition-colors"
+                                                        >
+                                                            {t('mark_in_progress') || 'En Proceso'}
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={async () => {
+                                                            const token = localStorage.getItem('token') || '';
+                                                            await mantenimientosAPI.update(m.id, { estado: 'completado' }, token);
+                                                            loadDashboardData();
+                                                        }}
+                                                        className="flex-1 py-2 bg-green-500/20 text-green-400 rounded-lg text-xs font-semibold hover:bg-green-500/40 transition-colors"
+                                                    >
+                                                        {t('mark_complete') || 'Completar'}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === 'marina' && (
+                        <div>
+                            <div className="mb-6">
+                                <h3 className="text-2xl font-bold text-white">{t('marina_title')}</h3>
+                                <p className="text-white/50 text-sm mt-1">{t('marina_subtitle')}</p>
+                            </div>
+
+                            {/* Stats row */}
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                {[
+                                    { label: t('berths_total'), value: amarres.length, color: 'text-white' },
+                                    { label: t('berths_available'), value: amarres.filter(a => a.estado === 'disponible').length, color: 'text-green-400' },
+                                    { label: t('berths_occupied'), value: amarres.filter(a => a.estado === 'ocupado').length, color: 'text-red-400' },
+                                    { label: t('berths_maintenance'), value: amarres.filter(a => a.estado === 'mantenimiento').length, color: 'text-orange-400' },
+                                ].map((stat, i) => (
+                                    <div key={i} className="glass-effect rounded-xl p-4">
+                                        <p className="text-white/50 text-xs uppercase mb-1">{stat.label}</p>
+                                        <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="flex flex-col xl:flex-row gap-6">
+                                {/* Marina Map */}
+                                <div className="flex-1 glass-effect rounded-2xl p-6 overflow-x-auto">
+                                    {/* Legend */}
+                                    <div className="flex items-center gap-6 mb-5">
+                                        <span className="text-white/60 text-sm font-semibold">{t('legend')}:</span>
+                                        {[{ color: '#10b981', label: t('berth_available') }, { color: '#ef4444', label: t('berth_occupied') }, { color: '#f59e0b', label: t('berth_maintenance') }].map(l => (
+                                            <div key={l.label} className="flex items-center gap-2">
+                                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: l.color }} />
+                                                <span className="text-white/70 text-sm">{l.label}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {amarres.length === 0 ? (
+                                        <div className="text-center py-16">
+                                            <svg className="w-16 h-16 text-white/20 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                            </svg>
+                                            <p className="text-white/40">No hay amarres registrados en la marina</p>
+                                            <p className="text-white/25 text-sm mt-1">Los amarres se crean automáticamente al iniciar el servidor</p>
+                                        </div>
+                                    ) : (
+                                        (() => {
+                                            const filas = Array.from(new Set(amarres.map(a => a.fila))).sort();
+                                            return (
+                                                <div className="min-w-[480px]">
+                                                    {/* Water background */}
+                                                    <div className="relative rounded-xl overflow-hidden" style={{ background: 'linear-gradient(180deg, #0d2137 0%, #0a3a5c 50%, #083052 100%)' }}>
+                                                        {/* Subtle water lines */}
+                                                        {[...Array(8)].map((_, i) => (
+                                                            <div key={i} className="absolute left-0 right-0 border-b border-blue-400/8" style={{ top: `${8 + i * 12}%` }} />
+                                                        ))}
+
+                                                        {/* Main dock (muelle horizontal) */}
+                                                        <div className="relative z-10 bg-[#3d2b1e] py-3 px-4 text-center border-b-2 border-[#5a3f2e]">
+                                                            <span className="text-white/80 text-xs font-bold tracking-widest uppercase">Muelle Principal</span>
+                                                        </div>
+
+                                                        {/* Pantalanes + Amarres */}
+                                                        <div className="relative z-10 flex justify-center gap-12 px-8 pb-6">
+                                                            {filas.map(fila => {
+                                                                const berths = amarres.filter(a => a.fila === fila).sort((a, b) => a.numero - b.numero);
+                                                                return (
+                                                                    <div key={fila} className="flex flex-col items-center">
+                                                                        {/* Pantalán label */}
+                                                                        <div className="w-6 text-center mb-0">
+                                                                            <span className="text-white/40 text-[10px] font-bold">{fila}</span>
+                                                                        </div>
+
+                                                                        {/* Palo (pier) + amarres a los lados */}
+                                                                        <div className="flex flex-row items-stretch gap-1">
+                                                                            {/* Left berths (odd numbered) */}
+                                                                            <div className="flex flex-col gap-2 justify-start pt-2">
+                                                                                {berths.filter((_, idx) => idx % 2 === 0).map(a => {
+                                                                                    const colors: Record<string, { bg: string; border: string; text: string }> = {
+                                                                                        disponible: { bg: 'bg-emerald-500', border: 'border-emerald-400', text: 'text-emerald-50' },
+                                                                                        ocupado:    { bg: 'bg-red-500',     border: 'border-red-400',     text: 'text-red-50' },
+                                                                                        mantenimiento: { bg: 'bg-amber-500', border: 'border-amber-400', text: 'text-amber-50' },
+                                                                                    };
+                                                                                    const c = colors[a.estado] || colors.disponible;
+                                                                                    return (
+                                                                                        <button
+                                                                                            key={a.id}
+                                                                                            onClick={() => setSelectedAmarre(selectedAmarre?.id === a.id ? null : a)}
+                                                                                            className={`w-16 h-10 ${c.bg} ${c.border} border-2 rounded flex flex-col items-center justify-center transition-all hover:scale-105 hover:z-10 relative ${
+                                                                                                selectedAmarre?.id === a.id ? 'ring-2 ring-white scale-105 shadow-lg' : ''
+                                                                                            }`}
+                                                                                        >
+                                                                                            <span className={`font-bold text-[10px] ${c.text}`}>{a.codigo}</span>
+                                                                                            {a.longitud_max && <span className={`text-[8px] ${c.text} opacity-75`}>{a.longitud_max}m</span>}
+                                                                                        </button>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+
+                                                                            {/* Central pier (palo marrón) */}
+                                                                            <div className="w-2.5 bg-[#4a3728] rounded-sm flex-shrink-0" style={{ minHeight: `${berths.length * 28}px` }} />
+
+                                                                            {/* Right berths (even numbered) */}
+                                                                            <div className="flex flex-col gap-2 justify-start pt-2">
+                                                                                {berths.filter((_, idx) => idx % 2 === 1).map(a => {
+                                                                                    const colors: Record<string, { bg: string; border: string; text: string }> = {
+                                                                                        disponible: { bg: 'bg-emerald-500', border: 'border-emerald-400', text: 'text-emerald-50' },
+                                                                                        ocupado:    { bg: 'bg-red-500',     border: 'border-red-400',     text: 'text-red-50' },
+                                                                                        mantenimiento: { bg: 'bg-amber-500', border: 'border-amber-400', text: 'text-amber-50' },
+                                                                                    };
+                                                                                    const c = colors[a.estado] || colors.disponible;
+                                                                                    return (
+                                                                                        <button
+                                                                                            key={a.id}
+                                                                                            onClick={() => setSelectedAmarre(selectedAmarre?.id === a.id ? null : a)}
+                                                                                            className={`w-16 h-10 ${c.bg} ${c.border} border-2 rounded flex flex-col items-center justify-center transition-all hover:scale-105 hover:z-10 relative ${
+                                                                                                selectedAmarre?.id === a.id ? 'ring-2 ring-white scale-105 shadow-lg' : ''
+                                                                                            }`}
+                                                                                        >
+                                                                                            <span className={`font-bold text-[10px] ${c.text}`}>{a.codigo}</span>
+                                                                                            {a.longitud_max && <span className={`text-[8px] ${c.text} opacity-75`}>{a.longitud_max}m</span>}
+                                                                                        </button>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()
+                                    )}
+                                </div>
+
+                                {/* Detail Panel */}
+                                {selectedAmarre && (
+                                    <div className="w-full xl:w-80 glass-effect rounded-2xl p-6 border border-white/20">
+                                        <div className="flex items-center justify-between mb-5">
+                                            <h4 className="text-lg font-bold text-white">{t('berth_details')}</h4>
+                                            <button onClick={() => setSelectedAmarre(null)} className="text-white/40 hover:text-white">
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                        </div>
+
+                                        {/* Berth code badge */}
+                                        <div className={`text-center py-4 rounded-xl mb-5 ${
+                                            selectedAmarre.estado === 'disponible' ? 'bg-emerald-500/20 border border-emerald-500/30' :
+                                            selectedAmarre.estado === 'ocupado' ? 'bg-red-500/20 border border-red-500/30' :
+                                            'bg-amber-500/20 border border-amber-500/30'
+                                        }`}>
+                                            <p className="text-3xl font-black text-white">{selectedAmarre.codigo}</p>
+                                            <p className={`text-sm font-semibold mt-1 ${
+                                                selectedAmarre.estado === 'disponible' ? 'text-emerald-400' :
+                                                selectedAmarre.estado === 'ocupado' ? 'text-red-400' : 'text-amber-400'
+                                            }`}>
+                                                {selectedAmarre.estado === 'disponible' ? t('berth_available') :
+                                                 selectedAmarre.estado === 'ocupado' ? t('berth_occupied') : t('berth_maintenance')}
+                                            </p>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between">
+                                                <span className="text-white/50 text-sm">{t('berth_dock')}</span>
+                                                <span className="text-white text-sm font-semibold">{selectedAmarre.muelle}</span>
+                                            </div>
+                                            {selectedAmarre.longitud_max && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-white/50 text-sm">{t('berth_max_length')}</span>
+                                                    <span className="text-white text-sm font-semibold">{selectedAmarre.longitud_max}m</span>
+                                                </div>
+                                            )}
+                                            <div className="flex justify-between">
+                                                <span className="text-white/50 text-sm">{t('berth_price')}</span>
+                                                <span className="text-[#d4af37] text-sm font-bold">
+                                                    {selectedAmarre.precio_mes > 0 ? `€${selectedAmarre.precio_mes.toLocaleString()}/mes` : '—'}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-white/50 text-sm">{t('berth_vessel')}</span>
+                                                <span className="text-white text-sm">
+                                                    {selectedAmarre.embarcacion_nombre || t('berth_no_vessel')}
+                                                </span>
+                                            </div>
+                                            {selectedAmarre.propietario_nombre && (
+                                                <div className="flex justify-between pt-2 border-t border-white/10">
+                                                    <span className="text-white/50 text-sm">Propietario</span>
+                                                    <span className="text-[#d4af37] text-sm font-semibold">{selectedAmarre.propietario_nombre}</span>
+                                                </div>
+                                            )}
+                                            {selectedAmarre.fecha_fin_alquiler && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-white/50 text-sm">Alquilado hasta</span>
+                                                    <span className="text-white/70 text-sm">
+                                                        {new Date(selectedAmarre.fecha_fin_alquiler).toLocaleDateString()}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="mt-5 pt-4 border-t border-white/10 flex flex-col gap-3">
+                                            {selectedAmarre.estado === 'disponible' && (
+                                                <button
+                                                    onClick={() => {
+                                                        setRentModal({ isOpen: true, amarreId: selectedAmarre.id });
+                                                        setRentMonths(1);
+                                                        setRentVesselId('');
+                                                    }}
+                                                    className="w-full py-2 bg-[#d4af37] text-[#0a1628] rounded-lg font-bold hover:bg-[#f4d03f] transition-colors"
+                                                >
+                                                    Alquilar Amarre
+                                                </button>
+                                            )}
+                                            
+                                            {selectedAmarre.estado === 'ocupado' && selectedAmarre.propietario_id === usuario?.id && (
+                                                <button
+                                                    onClick={async () => {
+                                                        if(!window.confirm('¿Seguro que deseas liberar este amarre? Dejarás de pagarlo de cara al mes que viene.')) return;
+                                                        try {
+                                                            const token = localStorage.getItem('token') || '';
+                                                            await amarresAPI.liberar(selectedAmarre.id, token);
+                                                            toast.success('Amarre liberado con éxito');
+                                                            loadDashboardData();
+                                                            setSelectedAmarre(null);
+                                                        } catch(e: any) {
+                                                            toast.error(e.message || 'Error al liberar amarre');
+                                                        }
+                                                    }}
+                                                    className="w-full py-2 bg-red-500/20 text-red-500 border border-red-500/50 rounded-lg font-semibold hover:bg-red-500/30 transition-colors"
+                                                >
+                                                    Liberar y Dejar Amarre
+                                                </button>
+                                            )}
+
+                                            {/* Only admin can change status manually */}
+                                            {usuario?.rol === 'admin' && (
+                                                <div className="mt-3">
+                                                    <p className="text-white/50 text-xs uppercase mb-2">Cambio de Estado Manual (Admin)</p>
+                                                    <div className="flex flex-col gap-2">
+                                                        {(['disponible', 'ocupado', 'mantenimiento'] as const).map(estado => (
+                                                            <button
+                                                                key={estado}
+                                                                disabled={selectedAmarre.estado === estado}
+                                                                onClick={async () => {
+                                                                    const token = localStorage.getItem('token') || '';
+                                                                    await amarresAPI.update(selectedAmarre.id, { estado }, token);
+                                                                    toast.success(`Amarre manual: ${estado}`);
+                                                                    loadDashboardData();
+                                                                    setSelectedAmarre({ ...selectedAmarre, estado });
+                                                                }}
+                                                                className={`py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                                                                    selectedAmarre.estado === estado
+                                                                        ? 'opacity-30 cursor-not-allowed bg-white/10 text-white'
+                                                                        : estado === 'disponible'
+                                                                            ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/40'
+                                                                            : estado === 'ocupado'
+                                                                                ? 'bg-red-500/20 text-red-400 hover:bg-red-500/40'
+                                                                                : 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/40'
+                                                                }`}
+                                                            >
+                                                                {estado === 'disponible' ? t('berth_available') :
+                                                                estado === 'ocupado' ? t('berth_occupied') : t('berth_maintenance')}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -900,11 +1391,84 @@ const Dashboard: React.FC = () => {
 
                     {activeTab === 'messages' && (
                         <div className="glass-effect rounded-2xl p-6">
-                            <h3 className="text-2xl font-bold text-white mb-6">Messages</h3>
-                            <p className="text-white/60">Messaging system coming soon...</p>
+                            <h3 className="text-2xl font-bold text-white mb-6">Mensajes</h3>
+                            <ChatInterface />
                         </div>
                     )}
                 </div>
+
+                {/* Modal Alquilar Amarre */}
+                {rentModal.isOpen && (
+                    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+                        <div className="bg-slate-900 rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl">
+                            <h3 className="text-xl font-bold text-white mb-4">Detalles del alquiler de amarre</h3>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-white/80 text-sm mb-2">Duración (Meses)</label>
+                                    <input 
+                                        type="number" 
+                                        min="1" 
+                                        value={rentMonths} 
+                                        onChange={(e) => setRentMonths(parseInt(e.target.value) || 1)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-white/80 text-sm mb-2">Asignar Embarcación</label>
+                                    <CustomSelect
+                                        value={rentVesselId.toString()}
+                                        onChange={(value) => setRentVesselId(value ? parseInt(value) : '')}
+                                        options={[
+                                            { value: '', label: '-- Selecciona una embarcación --' },
+                                            ...embarcaciones.filter(e => {
+                                                const amarreTarget = amarres.find(a => a.id === rentModal.amarreId);
+                                                if (!amarreTarget || !amarreTarget.longitud_max) return true;
+                                                const maxFt = amarreTarget.longitud_max * 3.28084;
+                                                return (e.longitud || 0) <= maxFt;
+                                            }).map(boat => ({
+                                                value: boat.id.toString(),
+                                                label: `${boat.nombre} (${boat.longitud}ft)`
+                                            }))
+                                        ]}
+                                        className="w-full text-sm z-50"
+                                    />
+                                    <p className="text-white/40 text-xs mt-2 italic">* Solo se muestran barcos de tu flota cuya eslora entra en los límites físicos del amarre seleccionado.</p>
+                                </div>
+                                <div className="flex gap-4 pt-4 mt-2 border-t border-white/10">
+                                    <button 
+                                        onClick={() => setRentModal({ isOpen: false, amarreId: null })}
+                                        className="flex-1 py-2 hover:bg-white/5 text-white/80 rounded-lg transition-colors border border-transparent hover:border-white/10"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button 
+                                        onClick={async () => {
+                                            if (rentMonths <= 0) return toast.error('Cantidad de meses inválida');
+                                            if (!rentVesselId) return toast.error('Debes asignar una embarcación');
+                                            try {
+                                                const token = localStorage.getItem('token') || '';
+                                                await amarresAPI.alquilar(
+                                                    rentModal.amarreId as number, 
+                                                    { meses: rentMonths, propietario_id: usuario?.id as number, embarcacion_id: rentVesselId as number }, 
+                                                    token
+                                                );
+                                                toast.success(`Amarre alquilado exitosamente.`);
+                                                loadDashboardData();
+                                                setSelectedAmarre(null);
+                                                setRentModal({ isOpen: false, amarreId: null });
+                                            } catch(e: any) {
+                                                toast.error(e.message || 'Error al alquilar amarre');
+                                            }
+                                        }}
+                                        className="flex-1 py-2 bg-[#d4af37] text-[#0a1628] rounded-lg font-bold hover:bg-[#f4d03f] transition-shadow shadow-[0_0_15px_rgba(212,175,55,0.3)]"
+                                    >
+                                        Confirmar Alquiler
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </main>
         </div>
     );

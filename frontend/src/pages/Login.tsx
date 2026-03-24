@@ -19,9 +19,13 @@ const Login: React.FC = () => {
         setLoading(true);
 
         try {
-            await login(formData.email, formData.password);
+            const user = await login(formData.email, formData.password);
             toast.success(t('login_success'));
-            navigate('/dashboard');
+            if (user.rol === 'admin' || user.rol === 'capitan') {
+                navigate('/dashboard');
+            } else {
+                navigate('/');
+            }
         } catch (error: any) {
             toast.error(error.message || t('login_error'));
         } finally {
@@ -30,8 +34,18 @@ const Login: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#0a1628] flex items-center justify-center p-6">
-            <div className="w-full max-w-md">
+        <div className="min-h-screen relative flex items-center justify-center p-6 overflow-hidden">
+            {/* Background Image */}
+            <div className="absolute inset-0 w-full h-full z-0">
+                <img
+                    alt="Luxury yacht background"
+                    className="object-cover w-full h-full brightness-50"
+                    src="https://images.unsplash.com/photo-1605281317010-fe5ffe798166?q=80&w=2044&auto=format&fit=crop"
+                />
+                <div className="absolute inset-0 bg-linear-to-tr from-navy-deep/90 via-navy-deep/60 to-background-dark/80"></div>
+            </div>
+
+            <div className="w-full max-w-md relative z-10">
                 {/* Logo */}
                 <div className="text-center mb-8">
                     <Link to="/" className="inline-flex items-center gap-3 mb-4">
