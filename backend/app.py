@@ -11,6 +11,9 @@ import os
 from functools import wraps
 from werkzeug.utils import secure_filename
 import stripe
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Configuración de la aplicación
 app = Flask(__name__)
