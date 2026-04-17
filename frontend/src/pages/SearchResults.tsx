@@ -6,6 +6,7 @@ import Navbar from '../components/shared/Navbar';
 import Footer from '../components/shared/Footer';
 import CustomSelect from '../components/shared/CustomSelect';
 import { useLanguage } from '../contex/LanguageContext';
+import { formatCategory, formatType } from '../utils/formatting';
 
 const SearchResults: React.FC = () => {
     const navigate = useNavigate();
@@ -108,9 +109,9 @@ const SearchResults: React.FC = () => {
                                         onChange={(value) => handleFilterChange('tipo', value)}
                                         options={[
                                             { value: '', label: t('all_types') },
-                                            { value: 'yacht', label: 'Yacht' },
-                                            { value: 'sailboat', label: 'Sailboat' },
-                                            { value: 'watercraft', label: 'Watercraft' }
+                                            { value: 'yacht', label: formatType('yacht') },
+                                            { value: 'sailboat', label: formatType('sailboat') },
+                                            { value: 'watercraft', label: formatType('watercraft') }
                                         ]}
                                         className="w-full text-sm z-50"
                                     />
@@ -218,7 +219,7 @@ const SearchResults: React.FC = () => {
                                                             </p>
                                                         )}
                                                         <p className="text-white/60 text-sm">
-                                                            {embarcacion.longitud}m • {embarcacion.capacidad} {t('guests')}
+                                                            {formatCategory(embarcacion.categoria)} • {embarcacion.capacidad} {t('guests')}
                                                         </p>
                                                     </div>
                                                     <div className="flex items-center gap-1">

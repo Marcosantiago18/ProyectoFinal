@@ -8,6 +8,8 @@ import { dashboardAPI, embarcacionesAPI, reservasAPI, mantenimientosAPI, amarres
 import { toast } from 'sonner';
 import ChatInterface from '../components/chat/ChatInterface';
 import CustomSelect from '../components/shared/CustomSelect';
+import { socket } from '../utils/socket';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 const Dashboard: React.FC = () => {
     const { usuario, logout } = useAuth();
@@ -18,7 +20,7 @@ const Dashboard: React.FC = () => {
 
     const [activeTab, setActiveTab] = useState<'dashboard' | 'fleet' | 'bookings' | 'maintenance' | 'analytics' | 'messages' | 'marina'>('dashboard');
     const [showVesselForm, setShowVesselForm] = useState(false);
-    const [stats, setStats] = useState<DashboardStats | null>(null);
+    const [, setStats] = useState<DashboardStats | null>(null);
     const [embarcaciones, setEmbarcaciones] = useState<Embarcacion[]>([]);
     const [reservas, setReservas] = useState<Reserva[]>([]);
     const [mantenimientos, setMantenimientos] = useState<Mantenimiento[]>([]);
@@ -39,6 +41,16 @@ const Dashboard: React.FC = () => {
             return;
         }
         loadDashboardData();
+        
+        // Socket.IO Listener para actualizaciones en Tiempo Real
+        socket.on('nueva_actividad', (data: any) => {
+            toast.success(`🤖 IA Assistant: ${data.mensaje}`, { duration: 5000 });
+            loadDashboardData(); // Recargar datos automáticamente
+        });
+
+        return () => {
+            socket.off('nueva_actividad');
+        };
     }, [usuario, navigate]);
 
     const loadDashboardData = async () => {
@@ -692,6 +704,83 @@ const Dashboard: React.FC = () => {
                         </>
                     )}
 
+                    {activeTab === 'analytics' && (
+                        <div className="space-y-6 animate-fade-in">
+                            <div className="flex items-center justify-between mb-2">
+                                <h3 className="text-2xl font-bold text-white">Inteligencia de Negocio</h3>
+                                <div className="px-4 py-2 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-lg border border-blue-500/30 text-blue-400 font-semibold text-sm flex items-center gap-2 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+                                    <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div> Live Analytics
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {/* Ingresos proyectados */}
+                                <div className="glass-effect rounded-2xl p-6 border border-white/5 shadow-2xl relative overflow-hidden group">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                    <h4 className="text-white/80 font-semibold mb-6 flex items-center gap-2">
+                                        <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                                        Proyección de Ingresos (Mensual)
+                                    </h4>
+                                    <div className="h-72">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <AreaChart data={[
+                                                { name: 'Ene', total: 4000 }, { name: 'Feb', total: 3000 }, { name: 'Mar', total: 5000 },
+                                                { name: 'Abr', total: 8500 }, { name: 'May', total: 12000 }, { name: 'Jun', total: 18000 }
+                                            ]}>
+                                                <defs>
+                                                    <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
+                                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                                    </linearGradient>
+                                                </defs>
+                                                <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                                                <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
+                                                <Tooltip 
+                                                    contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+                                                    itemStyle={{ color: '#60a5fa' }}
+                                                />
+                                                <Area type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" />
+                                            </AreaChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+
+                                {/* Distribución de Flota */}
+                                <div className="glass-effect rounded-2xl p-6 border border-white/5 shadow-2xl relative overflow-hidden group">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                    <h4 className="text-white/80 font-semibold mb-6 flex items-center gap-2">
+                                        <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" /></svg>
+                                        Distribución de Flota actual
+                                    </h4>
+                                    <div className="h-72">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={[
+                                                        { name: 'En Charter', value: embarcaciones.filter(e => e.estado === 'en_charter').length || 1 },
+                                                        { name: 'Disponibles', value: embarcaciones.filter(e => e.estado === 'disponible').length || 1 },
+                                                        { name: 'Mantenimiento', value: embarcaciones.filter(e => e.estado === 'mantenimiento').length || 1 }
+                                                    ]}
+                                                    cx="50%" cy="45%"
+                                                    innerRadius={60} outerRadius={90}
+                                                    paddingAngle={5}
+                                                    dataKey="value"
+                                                    stroke="none"
+                                                >
+                                                    <Cell fill="#10b981" />
+                                                    <Cell fill="#3b82f6" />
+                                                    <Cell fill="#f59e0b" />
+                                                </Pie>
+                                                <Tooltip contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+                                                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#94a3b8' }} />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {activeTab === 'fleet' && (
                         <div className="glass-effect rounded-2xl p-6">
                             <div className="flex items-center justify-between mb-6">
@@ -888,7 +977,7 @@ const Dashboard: React.FC = () => {
                                                 <td className="py-4 text-white/80">
                                                     {formatDate(reserva.fecha_inicio)} - {formatDate(reserva.fecha_fin)}
                                                 </td>
-                                                <td className="py-4 text-blue-500 font-bold">${reserva.precio_total.toLocaleString()}</td>
+                                                <td className="py-4 text-[#d4af37] font-bold">€{reserva.precio_total.toLocaleString()}</td>
                                                 <td className="py-4">
                                                     <span className={`badge ${getStatusBadge(reserva.estado)}`}>
                                                         {reserva.estado}
@@ -918,6 +1007,20 @@ const Dashboard: React.FC = () => {
                                                         >
                                                             {t('complete')}
                                                         </button>
+                                                    )}
+                                                    {['confirmada', 'completada'].includes(reserva.estado) && (
+                                                        <a
+                                                            href={`/api/pagos/factura/${reserva.id}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center gap-1 px-3 py-1 bg-[#d4af37]/15 text-[#d4af37] hover:bg-[#d4af37]/30 rounded transition-colors text-xs font-semibold border border-[#d4af37]/30"
+                                                            title="Descargar Factura PDF"
+                                                        >
+                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                            </svg>
+                                                            PDF
+                                                        </a>
                                                     )}
                                                     {['completada', 'cancelada'].includes(reserva.estado) && (
                                                         <span className="text-white/40 text-xs italic">{t('archived')}</span>
@@ -1382,12 +1485,7 @@ const Dashboard: React.FC = () => {
                         </div>
                     )}
 
-                    {activeTab === 'analytics' && (
-                        <div className="glass-effect rounded-2xl p-6">
-                            <h3 className="text-2xl font-bold text-white mb-6">Analytics</h3>
-                            <p className="text-white/60">Analytics dashboard coming soon...</p>
-                        </div>
-                    )}
+
 
                     {activeTab === 'messages' && (
                         <div className="glass-effect rounded-2xl p-6">

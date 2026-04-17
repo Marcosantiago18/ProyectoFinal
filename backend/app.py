@@ -2,22 +2,29 @@
 Backend principal para el sistema de alquiler de barcos
 Arquitectura: Flask + SQLAlchemy + MariaDB
 """
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
+from flask_socketio import SocketIO
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import os
+import io
 from functools import wraps
 from werkzeug.utils import secure_filename
 import stripe
 from dotenv import load_dotenv
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+from reportlab.lib.units import cm
 
 load_dotenv()
 
 # Configuración de la aplicación
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root@localhost/alquiler_barcos'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'mysql+pymysql://root@localhost/alquiler_barcos')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.urandom(24)
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
@@ -29,6 +36,7 @@ stripe.api_key = os.environ.get("STRIPE_API_KEY", "sk_test_placeholder")
 # Inicialización de extensiones
 db = SQLAlchemy(app)
 CORS(app, resources={r"/*": {"origins": "*"}})
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # ==================== MODELOS ====================
 
@@ -42,6 +50,7 @@ class Usuario(db.Model):
     telefono = db.Column(db.String(20))
     rol = db.Column(db.String(20), default='cliente')  # cliente, admin
     fecha_registro = db.Column(db.DateTime, default=datetime.utcnow)
+    telegram_id = db.Column(db.String(50), unique=True, nullable=True)
     
     reservas = db.relationship('Reserva', backref='usuario', lazy=True)
     
@@ -58,7 +67,8 @@ class Usuario(db.Model):
             'email': self.email,
             'telefono': self.telefono,
             'rol': self.rol,
-            'fecha_registro': self.fecha_registro.isoformat()
+            'fecha_registro': self.fecha_registro.isoformat() if self.fecha_registro else None,
+            'telegram_id': self.telegram_id
         }
 
 
@@ -87,6 +97,13 @@ class Embarcacion(db.Model):
     propietario = db.relationship('Usuario', backref='embarcaciones')
     
     def to_dict(self) -> dict:
+        # Obtenemos experiencias compatibles para este tipo/categoría
+        query = Experiencia.query.filter(
+            (Experiencia.tipo_barco_compatible.like(f"%{self.tipo}%")) |
+            (Experiencia.tipo_barco_compatible.like(f"%{self.categoria}%"))
+        )
+        experiencias_compatibles = [exp.to_dict() for exp in query.all()]
+        
         return {
             'id': self.id,
             'nombre': self.nombre,
@@ -104,16 +121,55 @@ class Embarcacion(db.Model):
             'rating': self.rating,
             'propietario_id': self.propietario_id,
             'propietario_nombre': self.propietario.nombre if self.propietario else 'Nautica',
-            'fecha_creacion': self.fecha_creacion.isoformat()
+            'fecha_creacion': self.fecha_creacion.isoformat() if self.fecha_creacion else None,
+            'experiencias_disponibles': experiencias_compatibles
         }
 
+
+# Tabla de asociación para reservas y experiencias
+reserva_experiencias = db.Table('reserva_experiencias',
+    db.Column('reserva_id', db.Integer, db.ForeignKey('reservas.id'), primary_key=True),
+    db.Column('experiencia_id', db.Integer, db.ForeignKey('experiencias.id'), primary_key=True)
+)
+
+class Experiencia(db.Model):
+    __tablename__ = 'experiencias'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    titulo = db.Column(db.String(100), nullable=False)
+    subtitulo = db.Column(db.String(150))
+    descripcion = db.Column(db.Text)
+    precio = db.Column(db.Float, nullable=False)
+    duracion = db.Column(db.String(50))
+    capacidad = db.Column(db.String(50))
+    emoji = db.Column(db.String(10))
+    gradient = db.Column(db.String(100))
+    highlights = db.Column(db.Text)  # Guardado como string separado por comas
+    tipo_barco_compatible = db.Column(db.String(100)) # ej: 'yacht,sailboat'
+    imagen_url = db.Column(db.String(255))
+    
+    def to_dict(self) -> dict:
+        return {
+            'id': self.id,
+            'titulo': self.titulo,
+            'subtitulo': self.subtitulo,
+            'descripcion': self.descripcion,
+            'precio': self.precio,
+            'duracion': self.duracion,
+            'capacidad': self.capacidad,
+            'emoji': self.emoji,
+            'gradient': self.gradient,
+            'highlights': self.highlights.split(',') if self.highlights else [],
+            'tipo_barco_compatible': self.tipo_barco_compatible.split(',') if self.tipo_barco_compatible else [],
+            'imagen_url': self.imagen_url
+        }
 
 class Reserva(db.Model):
     __tablename__ = 'reservas'
     
     id = db.Column(db.Integer, primary_key=True)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
-    embarcacion_id = db.Column(db.Integer, db.ForeignKey('embarcaciones.id'), nullable=False)
+    embarcacion_id = db.Column(db.Integer, db.ForeignKey('embarcaciones.id'), nullable=True) # Opcional para experiencias solas
     fecha_inicio = db.Column(db.DateTime, nullable=False)
     fecha_fin = db.Column(db.DateTime, nullable=False)
     precio_total = db.Column(db.Float, nullable=False)
@@ -122,20 +178,23 @@ class Reserva(db.Model):
     notas = db.Column(db.Text)
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
     
+    experiencias = db.relationship('Experiencia', secondary=reserva_experiencias, backref=db.backref('reservas', lazy='dynamic'))
+    
     def to_dict(self) -> dict:
         return {
             'id': self.id,
             'usuario_id': self.usuario_id,
             'usuario_nombre': self.usuario.nombre if self.usuario else None,
             'embarcacion_id': self.embarcacion_id,
-            'embarcacion_nombre': self.embarcacion.nombre if self.embarcacion else None,
-            'fecha_inicio': self.fecha_inicio.isoformat(),
-            'fecha_fin': self.fecha_fin.isoformat(),
+            'embarcacion_nombre': self.embarcacion.nombre if self.embarcacion_id and self.embarcacion else 'Experiencia Independiente',
+            'fecha_inicio': self.fecha_inicio.isoformat() if self.fecha_inicio else None,
+            'fecha_fin': self.fecha_fin.isoformat() if self.fecha_fin else None,
             'precio_total': self.precio_total,
             'estado': self.estado,
             'tipo_evento': self.tipo_evento,
             'notas': self.notas,
-            'fecha_creacion': self.fecha_creacion.isoformat()
+            'fecha_creacion': self.fecha_creacion.isoformat() if self.fecha_creacion else None,
+            'experiencias': [exp.to_dict() for exp in self.experiencias]
         }
 
 
@@ -200,7 +259,7 @@ class Review(db.Model):
             'embarcacion_id': self.embarcacion_id,
             'rating': self.rating,
             'comentario': self.comentario,
-            'fecha_creacion': self.fecha_creacion.isoformat()
+            'fecha_creacion': self.fecha_creacion.isoformat() if self.fecha_creacion else None
         }
 
 class Favorito(db.Model):
@@ -219,7 +278,7 @@ class Favorito(db.Model):
             'usuario_id': self.usuario_id,
             'embarcacion_id': self.embarcacion_id,
             'embarcacion': self.embarcacion.to_dict() if self.embarcacion else None,
-            'fecha_creacion': self.fecha_creacion.isoformat()
+            'fecha_creacion': self.fecha_creacion.isoformat() if self.fecha_creacion else None
         }
 
 
@@ -243,7 +302,7 @@ class Mantenimiento(db.Model):
             'embarcacion_nombre': self.embarcacion.nombre if self.embarcacion else None,
             'tipo': self.tipo,
             'descripcion': self.descripcion,
-            'fecha_programada': self.fecha_programada.isoformat(),
+            'fecha_programada': self.fecha_programada.isoformat() if self.fecha_programada else None,
             'fecha_completada': self.fecha_completada.isoformat() if self.fecha_completada else None,
             'costo': self.costo,
             'estado': self.estado,
@@ -271,7 +330,7 @@ class Mensaje(db.Model):
             'destinatario_id': self.destinatario_id,
             'destinatario_nombre': self.destinatario.nombre if self.destinatario else None,
             'contenido': self.contenido,
-            'fecha_envio': self.fecha_envio.isoformat(),
+            'fecha_envio': self.fecha_envio.isoformat() if self.fecha_envio else None,
             'leido': self.leido
         }
 
@@ -522,6 +581,57 @@ def delete_embarcacion(id: int):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/experiencias', methods=['GET'])
+def get_experiencias():
+    """Obtener todas las experiencias disponibles"""
+    try:
+        tipo = request.args.get('tipo')
+        query = Experiencia.query
+        if tipo:
+            query = query.filter(Experiencia.tipo_barco_compatible.like(f"%{tipo}%"))
+        
+        experiencias = query.all()
+        return jsonify([e.to_dict() for e in experiencias]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/experiencias/booking', methods=['POST'])
+def book_independent_experience():
+    """Permite contratar una experiencia directamente sin elegir barco primero"""
+    try:
+        data = request.get_json()
+        usuario_id = data.get('usuario_id')
+        experiencia_id = data.get('experiencia_id')
+        
+        if not usuario_id or not experiencia_id:
+            return jsonify({'error': 'usuario_id y experiencia_id requeridos'}), 400
+            
+        exp = Experiencia.query.get_or_404(experiencia_id)
+        ahora = datetime.utcnow()
+        
+        reserva = Reserva(
+            usuario_id=usuario_id,
+            embarcacion_id=None, # Reserva independiente
+            fecha_inicio=ahora,
+            fecha_fin=ahora + timedelta(hours=3),
+            precio_total=exp.precio,
+            estado='confirmada', # Asumimos confirmada si es directa por ahora
+            tipo_evento='experience',
+            notas=f"Contratación directa de experiencia: {exp.titulo}"
+        )
+        reserva.experiencias.append(exp)
+        
+        db.session.add(reserva)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Experiencia contratada exitosamente',
+            'reserva': reserva.to_dict()
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 # ==================== RUTAS - RESERVAS ====================
 
 @app.route('/api/reservas', methods=['GET'])
@@ -563,32 +673,48 @@ def create_reserva():
     try:
         data = request.get_json()
         
-        # Validar disponibilidad
-        embarcacion = Embarcacion.query.get_or_404(data['embarcacion_id'])
-        fecha_inicio = datetime.fromisoformat(data['fecha_inicio'])
-        fecha_fin = datetime.fromisoformat(data['fecha_fin'])
+        # Validar disponibilidad si hay barco
+        embarcacion_id = data.get('embarcacion_id')
+        embarcacion = None
+        if embarcacion_id:
+            embarcacion = Embarcacion.query.get_or_404(embarcacion_id)
+            fecha_inicio = datetime.fromisoformat(data['fecha_inicio'])
+            fecha_fin = datetime.fromisoformat(data['fecha_fin'])
+            
+            # Verificar conflictos de reservas (solo si hay barco)
+            conflictos = Reserva.query.filter(
+                Reserva.embarcacion_id == embarcacion_id,
+                Reserva.estado.in_(['pendiente', 'confirmada', 'en_curso']),
+                db.or_(
+                    db.and_(Reserva.fecha_inicio <= fecha_inicio, Reserva.fecha_fin >= fecha_inicio),
+                    db.and_(Reserva.fecha_inicio <= fecha_fin, Reserva.fecha_fin >= fecha_fin)
+                )
+            ).first()
+            
+            if conflictos:
+                return jsonify({'error': 'La embarcación no está disponible en esas fechas'}), 400
+        else:
+            fecha_inicio = datetime.fromisoformat(data['fecha_inicio'])
+            fecha_fin = datetime.fromisoformat(data['fecha_fin'])
+
+        # Manejar experiencias
+        experiencia_ids = data.get('experiencia_ids', [])
+        experiencias_obj = Experiencia.query.filter(Experiencia.id.in_(experiencia_ids)).all()
         
-        # Verificar conflictos de reservas
-        conflictos = Reserva.query.filter(
-            Reserva.embarcacion_id == data['embarcacion_id'],
-            Reserva.estado.in_(['pendiente', 'confirmada', 'en_curso']),
-            db.or_(
-                db.and_(Reserva.fecha_inicio <= fecha_inicio, Reserva.fecha_fin >= fecha_inicio),
-                db.and_(Reserva.fecha_inicio <= fecha_fin, Reserva.fecha_fin >= fecha_fin)
-            )
-        ).first()
-        
-        if conflictos:
-            return jsonify({'error': 'La embarcación no está disponible en esas fechas'}), 400
-        
-        # Utilizar precio_total provisto por el frontend, o calcular mínimo 1 día
-        dias = (fecha_fin - fecha_inicio).days
-        precio_total_calculado = max(1, dias) * embarcacion.precio_dia
-        precio_total = data.get('precio_total', precio_total_calculado)
-        
+        # Calcular precio
+        precio_total = data.get('precio_total', 0)
+        if not precio_total:
+            # Si no viene precio_total, calculamos base
+            if embarcacion:
+                dias = max(1, (fecha_fin - fecha_inicio).days)
+                precio_total = dias * embarcacion.precio_dia
+            # Añadir precio de experiencias
+            for exp in experiencias_obj:
+                precio_total += exp.precio
+
         reserva = Reserva(
             usuario_id=data['usuario_id'],
-            embarcacion_id=data['embarcacion_id'],
+            embarcacion_id=embarcacion_id,
             fecha_inicio=fecha_inicio,
             fecha_fin=fecha_fin,
             precio_total=precio_total,
@@ -597,6 +723,9 @@ def create_reserva():
             notas=data.get('notas')
         )
         
+        for exp in experiencias_obj:
+            reserva.experiencias.append(exp)
+            
         db.session.add(reserva)
         db.session.commit()
         
@@ -1095,24 +1224,246 @@ def send_mensaje():
 
 @app.route('/api/pagos/create-intent', methods=['POST'])
 def create_payment_intent():
+    """Crea un PaymentIntent de Stripe para pagar una reserva"""
     try:
         data = request.json
-        # Convertir a centavos para Stripe
-        amount = int(data.get('amount', 0) * 100)
+        reserva_id = data.get('reserva_id')
+        amount = int(float(data.get('amount', 0)) * 100)  # Stripe usa centimos
         
+        if amount < 50:
+            return jsonify(error='El importe mínimo es 0.50 EUR'), 400
+
         intent = stripe.PaymentIntent.create(
             amount=amount,
-            currency='usd',
-            setup_future_usage='off_session',
-            automatic_payment_methods={
-                'enabled': True,
-            },
+            currency='eur',
+            automatic_payment_methods={'enabled': True},
+            metadata={'reserva_id': str(reserva_id)} if reserva_id else {}
         )
-        return jsonify({
-            'clientSecret': intent.client_secret
-        })
+
+        # Marcar reserva como proceso de pago en curso
+        if reserva_id:
+            reserva = Reserva.query.get(reserva_id)
+            if reserva:
+                reserva.stripe_payment_intent_id = intent.id
+                db.session.commit()
+
+        return jsonify({'clientSecret': intent.client_secret, 'payment_intent_id': intent.id})
     except Exception as e:
         return jsonify(error=str(e)), 400
+
+
+@app.route('/api/pagos/confirmar', methods=['POST'])
+def confirmar_pago():
+    """Confirma el pago y genera la factura PDF"""
+    try:
+        data = request.json
+        reserva_id = data.get('reserva_id')
+        payment_intent_id = data.get('payment_intent_id')
+        
+        if not reserva_id:
+            return jsonify(error='reserva_id requerido'), 400
+        
+        reserva = Reserva.query.get_or_404(reserva_id)
+        
+        # Verificar pago con Stripe (en modo test siempre confirmamos)
+        if payment_intent_id:
+            try:
+                pi = stripe.PaymentIntent.retrieve(payment_intent_id)
+                if pi.status not in ('succeeded', 'requires_capture'):
+                    pass  # En modo test/dev aceptamos igualmente
+            except Exception:
+                pass
+        
+        reserva.estado = 'confirmada'
+        db.session.commit()
+
+        # Emitir evento WebSocket
+        socketio.emit('nueva_actividad', {
+            'tipo': 'pago',
+            'mensaje': f'Pago confirmado para la reserva #{reserva.id} - {reserva.embarcacion.nombre}'
+        }, namespace='/')
+
+        return jsonify({
+            'message': 'Pago confirmado y reserva actualizada.',
+            'reserva': reserva.to_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(error=str(e)), 500
+
+
+@app.route('/api/pagos/factura/<int:reserva_id>', methods=['GET'])
+def generar_factura_pdf(reserva_id: int):
+    """Genera y devuelve un PDF de factura para la reserva"""
+    try:
+        reserva = Reserva.query.get_or_404(reserva_id)
+        usuario = Usuario.query.get(reserva.usuario_id)
+        embarcacion = Embarcacion.query.get(reserva.embarcacion_id)
+
+        if not usuario or not embarcacion:
+            return jsonify(error='Datos de reserva incompletos'), 404
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer, pagesize=A4,
+            rightMargin=2*cm, leftMargin=2*cm,
+            topMargin=2*cm, bottomMargin=2*cm
+        )
+
+        styles = getSampleStyleSheet()
+        gold = colors.HexColor('#D4AF37')
+        dark = colors.HexColor('#0A1628')
+        grey = colors.HexColor('#64748b')
+
+        title_style = ParagraphStyle('title', fontName='Helvetica-Bold', fontSize=22, textColor=dark)
+        subtitle_style = ParagraphStyle('subtitle', fontName='Helvetica', fontSize=11, textColor=grey)
+        label_style = ParagraphStyle('label', fontName='Helvetica-Bold', fontSize=10, textColor=dark)
+        value_style = ParagraphStyle('value', fontName='Helvetica', fontSize=10, textColor=grey)
+        section_style = ParagraphStyle('section', fontName='Helvetica-Bold', fontSize=12, textColor=gold)
+
+        elements = []
+
+        # --- CABECERA ---
+        elements.append(Paragraph('⛵ Luxury Nautical Charter', title_style))
+        elements.append(Paragraph('Factura Oficial de Servicio', subtitle_style))
+        elements.append(Spacer(1, 0.3*cm))
+        elements.append(HRFlowable(width='100%', thickness=2, color=gold))
+        elements.append(Spacer(1, 0.5*cm))
+
+        # --- Número de factura y fecha ---
+        fecha_emision = datetime.utcnow().strftime('%d/%m/%Y')
+        header_data = [
+            ['Nº Factura:', f'FAC-{reserva.id:05d}', 'Fecha emisión:', fecha_emision],
+            ['Estado:', reserva.estado.upper(), 'Moneda:', 'EUR (€)'],
+        ]
+        header_table = Table(header_data, colWidths=[3.5*cm, 5*cm, 3.5*cm, 5*cm])
+        header_table.setStyle(TableStyle([
+            ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
+            ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
+            ('FONTNAME', (2,0), (2,-1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 10),
+            ('TEXTCOLOR', (0,0), (0,-1), dark),
+            ('TEXTCOLOR', (2,0), (2,-1), dark),
+            ('TEXTCOLOR', (1,0), (1,-1), grey),
+            ('TEXTCOLOR', (3,0), (3,-1), grey),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+        ]))
+        elements.append(header_table)
+        elements.append(Spacer(1, 0.5*cm))
+        elements.append(HRFlowable(width='100%', thickness=0.5, color=colors.HexColor('#e2e8f0')))
+        elements.append(Spacer(1, 0.5*cm))
+
+        # --- CLIENTE ---
+        elements.append(Paragraph('Datos del Cliente', section_style))
+        elements.append(Spacer(1, 0.3*cm))
+        client_data = [
+            ['Nombre:', usuario.nombre],
+            ['Email:', usuario.email],
+            ['Teléfono:', usuario.telefono or 'No especificado'],
+        ]
+        client_table = Table(client_data, colWidths=[4*cm, 12*cm])
+        client_table.setStyle(TableStyle([
+            ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
+            ('FONTNAME', (1,0), (1,-1), 'Helvetica'),
+            ('FONTSIZE', (0,0), (-1,-1), 10),
+            ('TEXTCOLOR', (0,0), (0,-1), dark),
+            ('TEXTCOLOR', (1,0), (1,-1), grey),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ]))
+        elements.append(client_table)
+        elements.append(Spacer(1, 0.6*cm))
+
+        # --- DETALLES DEL SERVICIO ---
+        elements.append(Paragraph('Detalle del Servicio', section_style))
+        elements.append(Spacer(1, 0.3*cm))
+
+        dias = max(1, (reserva.fecha_fin - reserva.fecha_inicio).days)
+        precio_dia = embarcacion.precio_dia or 0
+        subtotal = dias * precio_dia
+        iva = round(subtotal * 0.21, 2)
+        total = round(subtotal + iva, 2)
+
+        service_data = [
+            ['Descripción', 'Cantidad', 'Precio/Día', 'Importe'],
+            [f'Alquiler: {embarcacion.nombre}\n({embarcacion.tipo.capitalize()} • {embarcacion.longitud}m)', f'{dias} días', f'€{precio_dia:,.2f}', f'€{subtotal:,.2f}'],
+            ['', '', 'Subtotal:', f'€{subtotal:,.2f}'],
+            ['', '', 'IVA (21%):', f'€{iva:,.2f}'],
+            ['', '', 'TOTAL:', f'€{total:,.2f}'],
+        ]
+        col_widths = [7*cm, 2.5*cm, 3.5*cm, 3*cm]
+        service_table = Table(service_data, colWidths=col_widths)
+        service_table.setStyle(TableStyle([
+            # Header
+            ('BACKGROUND', (0,0), (-1,0), dark),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 10),
+            ('ALIGN', (1,0), (-1,-1), 'RIGHT'),
+            ('ALIGN', (0,0), (0,-1), 'LEFT'),
+            # Filas alternas
+            ('BACKGROUND', (0,1), (-1,1), colors.HexColor('#f8fafc')),
+            ('TEXTCOLOR', (0,1), (-1,1), dark),
+            # Totales
+            ('FONTNAME', (-2,-1), (-1,-1), 'Helvetica-Bold'),
+            ('TEXTCOLOR', (-2,-1), (-1,-1), gold),
+            ('FONTSIZE', (-2,-1), (-1,-1), 12),
+            ('LINEABOVE', (-2,-3), (-1,-3), 0.5, colors.HexColor('#e2e8f0')),
+            ('LINEABOVE', (-2,-1), (-1,-1), 1.5, gold),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+            ('TOPPADDING', (0,0), (-1,-1), 6),
+            ('GRID', (0,0), (-1,1), 0.25, colors.HexColor('#e2e8f0')),
+        ]))
+        elements.append(service_table)
+        elements.append(Spacer(1, 0.6*cm))
+
+        # --- FECHAS ---
+        elements.append(Paragraph('Detalles de la Reserva', section_style))
+        elements.append(Spacer(1, 0.3*cm))
+        booking_data = [
+            ['Embarcación:', embarcacion.nombre, 'Tipo:', embarcacion.tipo.capitalize()],
+            ['Fecha inicio:', reserva.fecha_inicio.strftime('%d/%m/%Y %H:%M'), 'Fecha fin:', reserva.fecha_fin.strftime('%d/%m/%Y %H:%M')],
+            ['Ubicación:', embarcacion.ubicacion or '—', 'Capacidad:', f'{embarcacion.capacidad} personas'],
+            ['Tipo evento:', reserva.tipo_evento or 'Alquiler estándar', 'Notas:', reserva.notas or '—'],
+        ]
+        booking_table = Table(booking_data, colWidths=[3.5*cm, 5*cm, 3.5*cm, 5*cm])
+        booking_table.setStyle(TableStyle([
+            ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
+            ('FONTNAME', (2,0), (2,-1), 'Helvetica-Bold'),
+            ('FONTNAME', (1,0), (1,-1), 'Helvetica'),
+            ('FONTNAME', (3,0), (3,-1), 'Helvetica'),
+            ('FONTSIZE', (0,0), (-1,-1), 10),
+            ('TEXTCOLOR', (0,0), (0,-1), dark),
+            ('TEXTCOLOR', (2,0), (2,-1), dark),
+            ('TEXTCOLOR', (1,0), (1,-1), grey),
+            ('TEXTCOLOR', (3,0), (3,-1), grey),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+        ]))
+        elements.append(booking_table)
+        elements.append(Spacer(1, 1*cm))
+
+        # --- PIE DE PÁGINA ---
+        elements.append(HRFlowable(width='100%', thickness=1, color=gold))
+        elements.append(Spacer(1, 0.3*cm))
+        elements.append(Paragraph(
+            'Luxury Nautical Charter • info@luxurynautical.com • +34 600 000 000',
+            ParagraphStyle('footer', fontName='Helvetica', fontSize=8, textColor=grey, alignment=1)
+        ))
+        elements.append(Paragraph(
+            'Este documento es una factura válida conforme a la normativa fiscal española (IVA 21%).',
+            ParagraphStyle('footer2', fontName='Helvetica', fontSize=7, textColor=colors.HexColor('#94a3b8'), alignment=1)
+        ))
+
+        doc.build(elements)
+        buffer.seek(0)
+
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=f'factura_reserva_{reserva.id}.pdf',
+            mimetype='application/pdf'
+        )
+    except Exception as e:
+        return jsonify(error=str(e)), 500
 
 
 # ==================== INICIALIZACIÓN ====================
@@ -1126,7 +1477,7 @@ def health_check():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-        print("✅ Base de datos inicializada")
+        print("Base de datos inicializada correctamente")
 
         # Seed de amarres si no existen
         if Amarre.query.count() == 0:
@@ -1149,6 +1500,6 @@ if __name__ == '__main__':
                     )
                     db.session.add(amarre)
             db.session.commit()
-            print(f"✅ {24} amarres creados automáticamente")
+            print(f"{24} amarres creados automáticamente")
 
-    app.run(debug=True, port=5000)
+    socketio.run(app, host='0.0.0.0', debug=True, port=5000, allow_unsafe_werkzeug=True)

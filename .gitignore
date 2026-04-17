@@ -1,0 +1,28 @@
+# Logs
+*.log
+bot_logs.txt
+
+# OS Junk
+.DS_Store
+Thumbs.db
+
+# Environments
+.env
+.env.local
+.env.*.local
+
+# Build/Dist
+dist/
+build/
+
+# Dependency directories
+node_modules/
+venv/
+env/
+__pycache__/
+
+# Local IDEs
+.vscode/
+.idea/
+*.swp
+*.swo

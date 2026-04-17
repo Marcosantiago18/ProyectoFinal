@@ -3,7 +3,7 @@
  * Centraliza todas las llamadas HTTP
  */
 
-const API_BASE_URL = 'http://127.0.0.1:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 interface FetchOptions extends RequestInit {
     token?: string;
@@ -248,7 +248,7 @@ export const favoritosAPI = {
     getByUsuario: async (usuario_id: number, token?: string) => {
         return fetchAPI(`/favoritos?usuario_id=${usuario_id}`, { token });
     },
-    add: async (data: { usuario_id: number; embarcacion_id: number }, token: string) => {
+    add: async (data: { usuario_id: number; evitar_duplicados?: boolean; embarcacion_id: number }, token: string) => {
         return fetchAPI('/favoritos', {
             method: 'POST',
             body: JSON.stringify(data),
@@ -258,6 +258,21 @@ export const favoritosAPI = {
     remove: async (id: number, token: string) => {
         return fetchAPI(`/favoritos/${id}`, {
             method: 'DELETE',
+            token,
+        });
+    }
+};
+
+// ==================== EXPERIENCIAS ====================
+export const experienciasAPI = {
+    getAll: async (params?: { tipo?: string }) => {
+        const query = params ? new URLSearchParams(params as any).toString() : '';
+        return fetchAPI(`/experiencias${query ? `?${query}` : ''}`);
+    },
+    bookIndependent: async (data: { usuario_id: number; experiencia_id: number }, token: string) => {
+        return fetchAPI('/experiencias/booking', {
+            method: 'POST',
+            body: JSON.stringify(data),
             token,
         });
     }

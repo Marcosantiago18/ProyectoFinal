@@ -12,6 +12,7 @@ import VesselDetail from './pages/VesselDetail';
 import SearchResults from './pages/SearchResults';
 import MyBookings from './pages/MyBookings';
 import Messages from './pages/Messages';
+import Experiences from './pages/Experiences';
 
 import { LanguageProvider } from './contex/LanguageContext';
 
@@ -43,7 +44,7 @@ const App: React.FC = () => {
             <Route path="/messages" element={<Messages />} />
             <Route path="/yachts" element={<SearchResults />} />
             <Route path="/jet-skis" element={<SearchResults />} />
-            <Route path="/experiences" element={<Home />} />
+            <Route path="/experiences" element={<Experiences />} />
             <Route path="*" element={<Home />} />
           </Routes>
         </BrowserRouter>

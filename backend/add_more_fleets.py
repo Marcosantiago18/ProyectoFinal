@@ -42,7 +42,7 @@ def seed_more_fleets():
                 'longitud': 11,
                 'precio_dia': 250.00,
                 'descripcion': 'Moto de agua rápida y ligera, ideal para recorrer las costas a alta velocidad.',
-                'imagen_url': 'https://images.unsplash.com/photo-1549480119-0ed1e57a41aa?w=800', # Jetski
+                'imagen_url': 'https://images.unsplash.com/photo-1554605963-c35beee78a5b?w=1200', # Jetski
                 'estado': 'disponible',
                 'incluye_capitan': False,
                 'incluye_tripulacion': False,
@@ -58,7 +58,7 @@ def seed_more_fleets():
                 'longitud': 75,
                 'precio_dia': 5200.00,
                 'descripcion': 'Yate de exploración con equipamiento de lujo para travesías largas.',
-                'imagen_url': 'https://images.unsplash.com/photo-1579737119782-411db103a3d2?w=800', # Yate
+                'imagen_url': 'https://images.unsplash.com/photo-1579737119782-411db103a3d2?w=1200', # Yate
                 'estado': 'disponible',
                 'incluye_capitan': True,
                 'incluye_tripulacion': True,
@@ -75,7 +75,7 @@ def seed_more_fleets():
                 'longitud': 55,
                 'precio_dia': 3100.00,
                 'descripcion': 'Crusero deportivo perfecto para pescar y navegar cómodamente.',
-                'imagen_url': 'https://images.unsplash.com/photo-1563604313271-89e47766b96e?w=800', # Sport yacht
+                'imagen_url': 'https://images.unsplash.com/photo-1563604313271-89e47766b96e?w=1200', # Sport yacht
                 'estado': 'disponible',
                 'incluye_capitan': True,
                 'incluye_tripulacion': False,
@@ -91,7 +91,7 @@ def seed_more_fleets():
                 'longitud': 12,
                 'precio_dia': 400.00,
                 'descripcion': 'Moto de agua de altísimas prestaciones y 3 plazas.',
-                'imagen_url': 'https://images.unsplash.com/photo-1621271109961-75217ea2a336?w=800', # Jetski in water
+                'imagen_url': 'https://images.unsplash.com/photo-1626297852194-a2f8c3a59e45?w=1200', # Jetski in water
                 'estado': 'disponible',
                 'incluye_capitan': False,
                 'incluye_tripulacion': False,
@@ -108,7 +108,7 @@ def seed_more_fleets():
                 'longitud': 65,
                 'precio_dia': 4800.00,
                 'descripcion': 'Catamarán de lujo, silencioso y perfecto para fiestas y atardeceres.',
-                'imagen_url': 'https://images.unsplash.com/photo-1570560868297-b08bc4443905?w=800', # Catamaran/sailboat
+                'imagen_url': 'https://images.unsplash.com/photo-1570560868297-b08bc4443905?w=1200', # Catamaran/sailboat
                 'estado': 'disponible',
                 'incluye_capitan': True,
                 'incluye_tripulacion': True,
@@ -124,7 +124,7 @@ def seed_more_fleets():
                 'longitud': 10,
                 'precio_dia': 300.00,
                 'descripcion': 'Agilidad y velocidad aseguradas con esta compacta moto de agua.',
-                'imagen_url': 'https://images.unsplash.com/photo-1634629452811-db6de2f518e9?w=800', # Jetski
+                'imagen_url': 'https://images.unsplash.com/photo-1634629452811-db6de2f518e9?w=1200', # Jetski
                 'estado': 'disponible',
                 'incluye_capitan': False,
                 'incluye_tripulacion': False,
@@ -141,7 +141,7 @@ def seed_more_fleets():
                 'longitud': 120,
                 'precio_dia': 15000.00,
                 'descripcion': 'Mega yate con jacuzzi, helipuerto y el máximo lujo que el dinero puede pagar.',
-                'imagen_url': 'https://images.unsplash.com/photo-1548119044-0baddaeccdd0?w=800', # Mega Yacht
+                'imagen_url': 'https://images.unsplash.com/photo-1548119044-0baddaeccdd0?w=1200', # Mega Yacht
                 'estado': 'disponible',
                 'incluye_capitan': True,
                 'incluye_tripulacion': True,
@@ -157,7 +157,7 @@ def seed_more_fleets():
                 'longitud': 9,
                 'precio_dia': 280.00,
                 'descripcion': 'Moto de agua monoplaza de competición.',
-                'imagen_url': 'https://images.unsplash.com/photo-1596766735513-3b4dfc4a1622?w=800', # Jetski
+                'imagen_url': 'https://images.unsplash.com/photo-1596766735513-3b4dfc4a1622?w=1200', # Jetski
                 'estado': 'disponible',
                 'incluye_capitan': False,
                 'incluye_tripulacion': False,
@@ -179,7 +179,7 @@ def seed_more_fleets():
                     'longitud': 11,
                     'precio_dia': 320.00,
                     'descripcion': 'Moto acuática ideal para sortear olas y disfrutar el horizonte.',
-                    'imagen_url': 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800', # Jetski
+                    'imagen_url': 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=1200', # Jetski
                     'estado': 'disponible',
                     'incluye_capitan': False,
                     'incluye_tripulacion': False,
@@ -199,7 +199,7 @@ def seed_more_fleets():
                     'longitud': 10,
                     'precio_dia': 290.00,
                     'descripcion': 'Paseos a alta velocidad llenos de adrenalina.',
-                    'imagen_url': 'https://images.unsplash.com/photo-1554605963-c35beee78a5b?w=800', # Watercraft
+                    'imagen_url': 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200', # Watercraft
                     'estado': 'disponible',
                     'incluye_capitan': False,
                     'incluye_tripulacion': False,
@@ -212,7 +212,7 @@ def seed_more_fleets():
         db.session.add_all(embarcaciones)
         db.session.commit()
         
-        print(f"✅ Agregados {len(capitanes_data)} nuevos capitanes y {len(new_vessels)} nuevas embarcaciones/motos.")
+        print(f"Agregados {len(capitanes_data)} nuevos capitanes y {len(new_vessels)} nuevas embarcaciones/motos.")
 
 if __name__ == '__main__':
     seed_more_fleets()

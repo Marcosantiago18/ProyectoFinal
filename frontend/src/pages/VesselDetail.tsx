@@ -9,7 +9,7 @@ import Footer from '../components/shared/Footer';
 import CustomSelect from '../components/shared/CustomSelect';
 import PaymentModal from '../components/shared/PaymentModal';
 import { toast } from 'sonner';
-
+import { formatCategory, formatType, formatCurrency } from '../utils/formatting';
 type BookingMode = 'dias' | 'horas';
 
 const MONTHS = [
@@ -38,6 +38,7 @@ const VesselDetail: React.FC = () => {
     const [isFavorite, setIsFavorite] = useState(false);
     const [favoriteId, setFavoriteId] = useState<number | null>(null);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [selectedExpIds, setSelectedExpIds] = useState<number[]>([]);
 
     const [bookingData, setBookingData] = useState({
         fecha_inicio: '',
@@ -226,8 +227,25 @@ const VesselDetail: React.FC = () => {
 
     const calculateTotal = () => {
         if (!embarcacion) return 0;
-        if (bookingMode === 'horas') return calculateHours() * (embarcacion.precio_dia / 8);
-        return calculateDuration() * embarcacion.precio_dia;
+        let base = 0;
+        if (bookingMode === 'horas') {
+            base = calculateHours() * (embarcacion.precio_dia / 8);
+        } else {
+            base = calculateDuration() * embarcacion.precio_dia;
+        }
+        
+        // Add selected experiences
+        const expTotal = (embarcacion.experiencias_disponibles || [])
+            .filter(exp => selectedExpIds.includes(exp.id))
+            .reduce((sum, exp) => sum + exp.precio, 0);
+
+        return base + expTotal;
+    };
+
+    const toggleExperience = (id: number) => {
+        setSelectedExpIds(prev => 
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
     };
 
     const handleBooking = () => {
@@ -255,6 +273,7 @@ const VesselDetail: React.FC = () => {
                 usuario_id: usuario?.id,
                 embarcacion_id: embarcacion?.id,
                 precio_total: total,
+                experiencia_ids: selectedExpIds,
                 ...payload,
             }, token);
             toast.success('Reserva creada exitosamente');
@@ -336,6 +355,8 @@ const VesselDetail: React.FC = () => {
                                             {embarcacion.ubicacion}
                                         </span>
                                         <span>•</span>
+                                        <span>{formatType(embarcacion.tipo)}</span>
+                                        <span>•</span>
                                         <span>{embarcacion.longitud}m</span>
                                         <span>•</span>
                                         <span>{embarcacion.capacidad} {t('guests')}</span>
@@ -376,8 +397,7 @@ const VesselDetail: React.FC = () => {
                                     </div>
                                     <div>
                                         <p className="text-white font-semibold">
-                                            {embarcacion.tipo === 'yacht' ? t('type_yacht') :
-                                                embarcacion.tipo === 'sailboat' ? t('type_sailboat') : t('type_watercraft')}
+                                            {formatType(embarcacion.tipo)}
                                         </p>
                                         <p className="text-white/60 text-sm">{t('vessel_type')}</p>
                                     </div>
@@ -406,7 +426,7 @@ const VesselDetail: React.FC = () => {
                                 </div>
                                 <div className="border-l-4 border-[#d4af37] pl-4">
                                     <p className="text-white/60 text-sm mb-1">{t('category')}</p>
-                                    <p className="text-white text-xl font-bold capitalize">{embarcacion.categoria || embarcacion.tipo}</p>
+                                    <p className="text-white text-xl font-bold">{formatCategory(embarcacion.categoria)}</p>
                                 </div>
                                 <div className="border-l-4 border-green-500 pl-4">
                                     <p className="text-white/60 text-sm mb-1">{t('captain')}</p>
@@ -418,6 +438,52 @@ const VesselDetail: React.FC = () => {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Additional Experiences */}
+                        {embarcacion.experiencias_disponibles && embarcacion.experiencias_disponibles.length > 0 && (
+                            <div className="glass-effect rounded-2xl p-8 mt-8 mb-8 border border-[#d4af37]/20">
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="w-10 h-10 bg-[#d4af37]/20 rounded-lg flex items-center justify-center">
+                                        <span className="text-2xl">✨</span>
+                                    </div>
+                                    <h3 className="text-2xl font-bold text-white">Mejora tu aventura</h3>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {embarcacion.experiencias_disponibles.map((exp) => (
+                                        <div 
+                                            key={exp.id}
+                                            onClick={() => toggleExperience(exp.id)}
+                                            className={`relative p-4 rounded-xl border transition-all cursor-pointer group ${
+                                                selectedExpIds.includes(exp.id)
+                                                    ? 'bg-[#d4af37]/10 border-[#d4af37] ring-1 ring-[#d4af37]'
+                                                    : 'bg-white/5 border-white/10 hover:border-white/30'
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-2xl">{exp.emoji}</span>
+                                                    <span className="text-white font-bold">{exp.titulo}</span>
+                                                </div>
+                                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                                    selectedExpIds.includes(exp.id) ? 'bg-[#d4af37] border-[#d4af37]' : 'border-white/20'
+                                                }`}>
+                                                    {selectedExpIds.includes(exp.id) && (
+                                                        <svg className="w-4 h-4 text-[#0a1628]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <p className="text-white/60 text-xs mb-3 line-clamp-1">{exp.subtitulo}</p>
+                                            <div className="flex items-center justify-between mt-auto">
+                                                <span className="text-white/40 text-xs">{exp.duracion}</span>
+                                                <span className="text-[#d4af37] font-bold">+{formatCurrency(exp.precio)}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* ===== REVIEWS ===== */}
                         <div className="glass-effect rounded-2xl p-8 mt-8">
@@ -659,21 +725,36 @@ const VesselDetail: React.FC = () => {
                                 />
                             </div>
 
-                            {/* Price summary */}
-                            {((bookingMode === 'dias' && duration > 0) || (bookingMode === 'horas' && hours > 0)) && (
+                             {((bookingMode === 'dias' && duration > 0) || (bookingMode === 'horas' && hours > 0)) && (
                                 <div className="mb-5 p-4 bg-[#d4af37]/10 rounded-xl border border-[#d4af37]/20">
                                     <div className="flex justify-between text-sm mb-1">
                                         <span className="text-white/60">
                                             {bookingMode === 'dias'
-                                                ? `$${embarcacion.precio_dia.toLocaleString()} × ${duration} día${duration > 1 ? 's' : ''}`
-                                                : `${hours}h × $${Math.round(embarcacion.precio_dia / 8).toLocaleString()}/h`
+                                                ? `${formatCurrency(embarcacion.precio_dia)} × ${duration} día${duration > 1 ? 's' : ''}`
+                                                : `${hours}h × ${formatCurrency(Math.round(embarcacion.precio_dia / 8))}/h`
                                             }
                                         </span>
-                                        <span className="text-white">${total.toLocaleString()}</span>
+                                        <span className="text-white">
+                                            {formatCurrency(bookingMode === 'horas' ? hours * (embarcacion.precio_dia / 8) : duration * embarcacion.precio_dia)}
+                                        </span>
                                     </div>
-                                    <div className="flex justify-between pt-2 border-t border-white/10">
+                                    
+                                    {/* Experiences breakdown */}
+                                    {(embarcacion.experiencias_disponibles || [])
+                                        .filter(exp => selectedExpIds.includes(exp.id))
+                                        .map(exp => (
+                                            <div key={exp.id} className="flex justify-between text-sm mb-1">
+                                                <span className="text-white/60">
+                                                    {exp.emoji} {exp.titulo}
+                                                </span>
+                                                <span className="text-white">+{formatCurrency(exp.precio)}</span>
+                                            </div>
+                                        ))
+                                    }
+
+                                    <div className="flex justify-between pt-2 border-t border-white/10 mt-2">
                                         <span className="text-white font-bold">{t('total')}</span>
-                                        <span className="text-[#d4af37] text-lg font-bold">${total.toLocaleString()}</span>
+                                        <span className="text-[#d4af37] text-lg font-bold">{formatCurrency(total)}</span>
                                     </div>
                                 </div>
                             )}

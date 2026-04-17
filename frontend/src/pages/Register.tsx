@@ -2,8 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contex/AuthContext';
-import Navbar from '../components/shared/Navbar';
-import Footer from '../components/shared/Footer';
+
 import CustomSelect from '../components/shared/CustomSelect';
 import { toast } from 'sonner';
 

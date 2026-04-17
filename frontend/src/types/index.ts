@@ -27,13 +27,29 @@ export interface Embarcacion {
     propietario_id?: number | null;
     propietario_nombre?: string;
     fecha_creacion: string;
+    experiencias_disponibles?: Experiencia[];
+}
+
+export interface Experiencia {
+    id: number;
+    titulo: string;
+    subtitulo?: string;
+    descripcion?: string;
+    precio: number;
+    duracion?: string;
+    capacidad?: string;
+    emoji?: string;
+    gradient?: string;
+    highlights?: string[];
+    tipo_barco_compatible?: string[];
+    imagen_url?: string;
 }
 
 export interface Reserva {
     id: number;
     usuario_id: number;
     usuario_nombre?: string;
-    embarcacion_id: number;
+    embarcacion_id: number | null;
     embarcacion_nombre?: string;
     fecha_inicio: string;
     fecha_fin: string;
@@ -42,6 +58,7 @@ export interface Reserva {
     tipo_evento?: string;
     notas?: string;
     fecha_creacion: string;
+    experiencias?: Experiencia[];
 }
 
 export interface Mantenimiento {
