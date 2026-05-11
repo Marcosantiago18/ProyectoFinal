@@ -165,8 +165,9 @@ def seed_all(db, Usuario, Embarcacion, Experiencia):
             db.session.add(e)
             emb_added += 1
         else:
-            # Auto-upgrade existing ones to local paths if they currently use unsplash
-            if not exists.imagen_url or 'unsplash' in str(exists.imagen_url).lower():
+            # Auto-upgrade existing ones to local paths if they currently use unsplash OR dead static uploads
+            current_url = str(exists.imagen_url).lower() if exists.imagen_url else ""
+            if not exists.imagen_url or 'unsplash' in current_url or '/static/uploads/' in current_url:
                 exists.imagen_url = data['imagen_url']
                 emb_updated += 1
     db.session.commit()
@@ -224,7 +225,8 @@ def seed_all(db, Usuario, Embarcacion, Experiencia):
     fuzzy_count = 0
     all_vessels = Embarcacion.query.all()
     for v in all_vessels:
-        if not v.imagen_url or 'unsplash' in str(v.imagen_url).lower():
+        curr = str(v.imagen_url).lower() if v.imagen_url else ""
+        if not v.imagen_url or 'unsplash' in curr or '/static/uploads/' in curr:
             for key, url in fuzzy_mappings.items():
                 if key in v.nombre.lower():
                     v.imagen_url = url
