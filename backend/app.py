@@ -583,7 +583,10 @@ def update_embarcacion(id: int):
         if 'longitud' in data: embarcacion.longitud = float(data['longitud'])
         if 'precio_dia' in data: embarcacion.precio_dia = float(data['precio_dia'])
         if 'descripcion' in data: embarcacion.descripcion = data['descripcion']
-        # Don't update imagen_url from data if it's there, we handled it with file
+        
+        # Allow updating URL directly if no file is uploaded
+        if 'imagen_url' in data and not ('imagen' in request.files and request.files['imagen'] and request.files['imagen'].filename != ''):
+             embarcacion.imagen_url = data['imagen_url']
         if 'estado' in data: embarcacion.estado = data['estado']
         if 'incluye_capitan' in data: 
             val = data['incluye_capitan']

@@ -986,19 +986,34 @@ const Dashboard: React.FC = () => {
                                             </label>
                                         </div>
 
-                                        {/* File Input for Image */}
+                                        {/* Image Source Selection */}
                                         <div className="md:col-span-1">
                                             <label className="block text-white/60 text-sm mb-2">{t('image_url_label')}</label>
-                                            <div className="flex gap-4 items-center">
-                                                {editingVessel?.imagen_url && (
-                                                    <img src={editingVessel.imagen_url} alt="Current" className="w-10 h-10 rounded object-cover" />
-                                                )}
+                                            <div className="space-y-3">
+                                                {/* Text Input for Direct URL */}
                                                 <input
-                                                    type="file"
-                                                    name="imagen"
-                                                    accept="image/*"
-                                                    className="input file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#d4af37] file:text-[#0a1628] hover:file:bg-[#f4d03f]"
+                                                    type="text"
+                                                    name="imagen_url"
+                                                    defaultValue={editingVessel?.imagen_url}
+                                                    placeholder="https://images.unsplash.com/..."
+                                                    className="input text-xs"
                                                 />
+                                                
+                                                {/* Flex container for Preview and File Upload */}
+                                                <div className="flex gap-3 items-center p-2 bg-white/5 border border-white/10 rounded-lg">
+                                                    {editingVessel?.imagen_url && (
+                                                        <img src={editingVessel.imagen_url} alt="Current" className="w-10 h-10 rounded object-cover border border-white/20 shrink-0" />
+                                                    )}
+                                                    <div className="flex-1 overflow-hidden">
+                                                        <input
+                                                            type="file"
+                                                            name="imagen"
+                                                            accept="image/*"
+                                                            className="text-xs text-white/60 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#d4af37]/20 file:text-[#d4af37] hover:file:bg-[#d4af37]/30 cursor-pointer w-full"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <p className="text-[10px] text-white/40 italic">Sube un archivo local O introduce una URL directa.</p>
                                             </div>
                                         </div>
 
