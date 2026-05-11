@@ -25,14 +25,19 @@ load_dotenv()
 # Configuración de la aplicación
 app = Flask(__name__)
 
+# Debug de entorno (Imprime nombres de variables disponibles, NO sus valores)
+print("🔍 Depuración de Entorno. Variables detectadas:")
+for key in os.environ.keys():
+    # Evitar imprimir contraseñas en los nombres si existieran, solo imprimir clave
+    print(f"- {key}")
+
 # Obtener URL de base de datos (probando variables comunes en Railway)
 db_url = os.environ.get('DATABASE_URL') or os.environ.get('MYSQL_URL') or os.environ.get('MYSQLURL')
 
 if not db_url:
-    print("⚠️ ADVERTENCIA: No se encontró DATABASE_URL ni MYSQL_URL en el entorno. Usando localhost por defecto.")
+    print("⚠️ ADVERTENCIA: No se encontró DATABASE_URL ni MYSQL_URL ni MYSQLURL en el entorno. Usando localhost por defecto.")
     db_url = 'mysql+pymysql://root@localhost/alquiler_barcos'
 else:
-    # Intentar extraer host para debug seguro
     from urllib.parse import urlparse
     try:
         parsed = urlparse(db_url)
