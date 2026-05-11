@@ -1082,6 +1082,7 @@ const Dashboard: React.FC = () => {
                         <div className="glass-effect rounded-2xl p-6">
                             <h3 className="text-2xl font-bold text-white mb-6">{t('all_bookings')}</h3>
                             <div className="overflow-x-auto pb-4">
+                                {/* Desktop Table */}
                                 <table className="w-full min-w-[800px] hidden md:table">
                                     <thead>
                                         <tr className="border-b border-white/10">
@@ -1156,6 +1157,63 @@ const Dashboard: React.FC = () => {
                                         ))}
                                     </tbody>
                                 </table>
+
+                                {/* Mobile Card View */}
+                                <div className="grid grid-cols-1 gap-4 md:hidden">
+                                    {reservas.length === 0 ? (
+                                        <div className="text-white/40 text-center py-12 italic text-sm bg-black/20 rounded-xl border border-dashed border-white/10">
+                                            {t('no_bookings') || 'Sin reservas activas'}
+                                        </div>
+                                    ) : (
+                                        reservas.map(reserva => (
+                                            <div key={reserva.id} className="glass-effect rounded-xl p-4 border border-white/10 space-y-3">
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <span className="text-[10px] text-[#d4af37] font-mono uppercase font-bold tracking-wider">Reserva #{reserva.id}</span>
+                                                        <h4 className="text-white font-bold text-base leading-tight mt-0.5">{reserva.embarcacion_nombre}</h4>
+                                                        <p className="text-white/50 text-xs mt-1 flex items-center gap-1">
+                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                                            {reserva.usuario_nombre}
+                                                        </p>
+                                                    </div>
+                                                    <span className={`text-[10px] font-bold px-2 py-1 rounded-full capitalize ${
+                                                        reserva.estado === 'confirmada' ? 'bg-green-500/20 text-green-400' :
+                                                        reserva.estado === 'cancelada' ? 'bg-red-500/20 text-red-400' : 'bg-orange-500/20 text-orange-400'
+                                                    }`}>
+                                                        {reserva.estado}
+                                                    </span>
+                                                </div>
+                                                <div className="bg-black/20 rounded-lg p-3 text-xs grid grid-cols-2 gap-2 border border-white/5">
+                                                    <div>
+                                                        <p className="text-white/40 font-semibold uppercase text-[9px]">{t('search_dates')}</p>
+                                                        <p className="text-white/90 font-medium mt-0.5 whitespace-nowrap">{formatDate(reserva.fecha_inicio).split(',')[0]} - {formatDate(reserva.fecha_fin).split(',')[0]}</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-white/40 font-semibold uppercase text-[9px]">{t('total')}</p>
+                                                        <p className="text-[#d4af37] font-bold text-sm mt-0.5">€{reserva.precio_total.toLocaleString()}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2 pt-1">
+                                                    {reserva.estado === 'pendiente' && (
+                                                        <>
+                                                            <button onClick={() => handleUpdateBooking(reserva.id, 'confirmada')} className="flex-1 py-2 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-400 rounded-lg text-xs font-bold transition-colors">{t('confirm')}</button>
+                                                            <button onClick={() => handleUpdateBooking(reserva.id, 'cancelada')} className="flex-1 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 rounded-lg text-xs font-bold transition-colors">{t('reject')}</button>
+                                                        </>
+                                                    )}
+                                                    {reserva.estado === 'confirmada' && (
+                                                        <button onClick={() => handleUpdateBooking(reserva.id, 'completada')} className="flex-1 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 rounded-lg text-xs font-bold transition-colors">{t('complete')}</button>
+                                                    )}
+                                                    {['confirmada', 'completada'].includes(reserva.estado) && (
+                                                        <a href={`/api/pagos/factura/${reserva.id}`} target="_blank" rel="noopener noreferrer" className="flex-1 py-2 bg-[#d4af37]/10 hover:bg-[#d4af37]/20 border border-[#d4af37]/30 text-[#d4af37] rounded-lg text-xs font-bold text-center flex items-center justify-center gap-1 transition-colors">
+                                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                                                            Recibo PDF
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -1341,16 +1399,16 @@ const Dashboard: React.FC = () => {
                             </div>
 
                             {/* Stats row */}
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
                                 {[
                                     { label: t('berths_total'), value: amarres.length, color: 'text-white' },
                                     { label: t('berths_available'), value: amarres.filter(a => a.estado === 'disponible').length, color: 'text-green-400' },
                                     { label: t('berths_occupied'), value: amarres.filter(a => a.estado === 'ocupado').length, color: 'text-red-400' },
                                     { label: t('berths_maintenance'), value: amarres.filter(a => a.estado === 'mantenimiento').length, color: 'text-orange-400' },
                                 ].map((stat, i) => (
-                                    <div key={i} className="glass-effect rounded-xl p-4">
-                                        <p className="text-white/50 text-xs uppercase mb-1">{stat.label}</p>
-                                        <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
+                                    <div key={i} className="glass-effect rounded-xl p-3 sm:p-4 border border-white/5 shadow-sm">
+                                        <p className="text-white/50 text-[10px] sm:text-xs uppercase font-bold tracking-wider mb-1">{stat.label}</p>
+                                        <p className={`text-2xl sm:text-3xl font-black ${stat.color}`}>{stat.value}</p>
                                     </div>
                                 ))}
                             </div>
@@ -1359,14 +1417,16 @@ const Dashboard: React.FC = () => {
                                 {/* Marina Map */}
                                 <div className="flex-1 glass-effect rounded-2xl p-6 overflow-x-auto">
                                     {/* Legend */}
-                                    <div className="flex items-center gap-6 mb-5">
-                                        <span className="text-white/60 text-sm font-semibold">{t('legend')}:</span>
-                                        {[{ color: '#10b981', label: t('berth_available') }, { color: '#ef4444', label: t('berth_occupied') }, { color: '#f59e0b', label: t('berth_maintenance') }].map(l => (
-                                            <div key={l.label} className="flex items-center gap-2">
-                                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: l.color }} />
-                                                <span className="text-white/70 text-sm">{l.label}</span>
-                                            </div>
-                                        ))}
+                                    <div className="flex flex-wrap items-center gap-3 sm:gap-6 mb-5 p-3 bg-black/20 rounded-lg border border-white/5">
+                                        <span className="text-white/50 text-xs font-bold uppercase tracking-wider">{t('legend')}:</span>
+                                        <div className="flex flex-wrap items-center gap-4">
+                                            {[{ color: '#10b981', label: t('berth_available') }, { color: '#ef4444', label: t('berth_occupied') }, { color: '#f59e0b', label: t('berth_maintenance') }].map(l => (
+                                                <div key={l.label} className="flex items-center gap-2 whitespace-nowrap">
+                                                    <div className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_currentColor]" style={{ backgroundColor: l.color, color: l.color }} />
+                                                    <span className="text-white/80 text-xs font-medium">{l.label}</span>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
 
                                     {amarres.length === 0 ? (

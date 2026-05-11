@@ -97,9 +97,9 @@ const ChatInterface: React.FC = () => {
   };
 
   return (
-    <div className="flex bg-[#0a1628] rounded-2xl overflow-hidden border border-white/10 h-[600px]">
+    <div className="flex flex-col md:flex-row bg-[#0a1628] rounded-2xl overflow-hidden border border-white/10 h-[600px] relative">
       {/* Contact List Sidebar */}
-      <div className="w-1/3 bg-white/5 border-r border-white/10 flex flex-col">
+      <div className={`w-full md:w-1/3 bg-white/5 border-r border-white/10 flex flex-col ${selectedContacto ? 'hidden md:flex' : 'flex'}`}>
         <div className="p-4 border-b border-white/10">
           <h2 className="text-white font-bold text-lg">
             {usuario?.rol === 'cliente' ? 'Capitanes Disponibles' : 'Conversaciones'}
@@ -129,12 +129,24 @@ const ChatInterface: React.FC = () => {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col bg-[#050a14]">
+      <div className={`w-full md:flex-1 flex-col bg-[#050a14] ${selectedContacto ? 'flex' : 'hidden md:flex'}`}>
         {selectedContacto ? (
           <>
-            <div className="p-4 border-b border-white/10 flex flex-col bg-white/5">
-              <span className="text-white font-bold text-lg">{selectedContacto.nombre}</span>
-              <span className="text-white/50 text-xs">Alineado para responder a la brevedad.</span>
+            <div className="p-4 border-b border-white/10 flex items-center gap-3 bg-white/5">
+              {/* Mobile Back Button */}
+              <button 
+                onClick={() => setSelectedContacto(null)} 
+                className="md:hidden p-2 -ml-2 text-white/60 hover:text-white"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              
+              <div className="flex flex-col flex-1">
+                <span className="text-white font-bold text-lg">{selectedContacto.nombre}</span>
+                <span className="text-white/50 text-xs">Alineado para responder a la brevedad.</span>
+              </div>
             </div>
             
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -149,10 +161,10 @@ const ChatInterface: React.FC = () => {
                   const isMine = msg.remitente_id === usuario?.id;
                   return (
                     <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                      <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-2 ${
                         isMine ? 'bg-[#d4af37] text-[#0a1628]' : 'bg-white/10 text-white'
                       }`}>
-                        <p className="text-sm">{msg.contenido}</p>
+                        <p className="text-sm leading-relaxed">{msg.contenido}</p>
                         <p className={`text-[10px] mt-1 text-right ${isMine ? 'text-black/60' : 'text-white/40'}`}>
                           {new Date(msg.fecha_envio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </p>
@@ -175,7 +187,7 @@ const ChatInterface: React.FC = () => {
               <button 
                 type="submit"
                 disabled={!newMessage.trim()}
-                className="bg-[#d4af37] text-black w-10 h-10 rounded-full flex justify-center items-center hover:bg-[#f4d03f] transition-colors disabled:opacity-50"
+                className="bg-[#d4af37] text-black w-10 h-10 rounded-full flex justify-center items-center hover:bg-[#f4d03f] transition-colors disabled:opacity-50 flex-shrink-0"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
