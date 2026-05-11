@@ -1573,7 +1573,12 @@ if __name__ == '__main__':
                         estado='disponible',
                     )
                     db.session.add(amarre)
-            db.session.commit()
+        db.session.commit()
             print(f"{24} amarres creados automáticamente")
 
-    socketio.run(app, host='0.0.0.0', debug=True, port=5000, allow_unsafe_werkzeug=True)
+    port = int(os.environ.get("PORT", 5000))
+    # Desactivar debug mode en producción para mayor seguridad
+    debug_mode = os.environ.get("FLASK_ENV", "development") == "development"
+    
+    print(f"🚀 Iniciando servidor en puerto {port}...")
+    socketio.run(app, host='0.0.0.0', debug=debug_mode, port=port, allow_unsafe_werkzeug=True)
