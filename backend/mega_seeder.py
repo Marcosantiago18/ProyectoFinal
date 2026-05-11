@@ -49,7 +49,7 @@ def seed_all(db, Usuario, Embarcacion, Experiencia):
             'longitud': 125,
             'precio_dia': 18000.00,
             'descripcion': 'La perla de nuestra flota. El mega yate de lujo definitivo para reyes y leyendas.',
-            'imagen_url': 'https://images.unsplash.com/photo-1548119044-0baddaeccdd0?w=1200',
+            'imagen_url': '/images/fleet/black_pearl.png',
             'estado': 'disponible',
             'incluye_capitan': True,
             'incluye_tripulacion': True,
@@ -65,7 +65,7 @@ def seed_all(db, Usuario, Embarcacion, Experiencia):
             'longitud': 65,
             'precio_dia': 4200.00,
             'descripcion': 'Velocidad y vistas infinitas en este yate explorador de última generación.',
-            'imagen_url': 'https://images.unsplash.com/photo-1579737119782-411db103a3d2?w=1200',
+            'imagen_url': '/images/fleet/amelia_explorer.png',
             'estado': 'disponible',
             'incluye_capitan': True,
             'incluye_tripulacion': False,
@@ -81,7 +81,7 @@ def seed_all(db, Usuario, Embarcacion, Experiencia):
             'longitud': 55,
             'precio_dia': 3500.00,
             'descripcion': 'Crucero de pesca y relax familiar con camarotes cinco estrellas.',
-            'imagen_url': 'https://images.unsplash.com/photo-1563604313271-89e47766b96e?w=1200',
+            'imagen_url': '/images/fleet/marlin_cruiser.png',
             'estado': 'disponible',
             'incluye_capitan': True,
             'incluye_tripulacion': False,
@@ -98,7 +98,7 @@ def seed_all(db, Usuario, Embarcacion, Experiencia):
             'longitud': 70,
             'precio_dia': 5200.00,
             'descripcion': 'Navegación silenciosa y majestuosa a bordo del catamarán más lujoso del Mediterráneo.',
-            'imagen_url': 'https://images.unsplash.com/photo-1570560868297-b08bc4443905?w=1200',
+            'imagen_url': '/images/fleet/dutchman_sailing.png',
             'estado': 'disponible',
             'incluye_capitan': True,
             'incluye_tripulacion': True,
@@ -114,7 +114,7 @@ def seed_all(db, Usuario, Embarcacion, Experiencia):
             'longitud': 50,
             'precio_dia': 2800.00,
             'descripcion': 'Velero clásico totalmente restaurado. Siente el viento puro y el olor a mar.',
-            'imagen_url': 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=1200',
+            'imagen_url': '/images/fleet/sparrow_spark.png',
             'estado': 'disponible',
             'incluye_capitan': True,
             'incluye_tripulacion': False,
@@ -131,7 +131,7 @@ def seed_all(db, Usuario, Embarcacion, Experiencia):
             'longitud': 10,
             'precio_dia': 450.00,
             'descripcion': 'La moto de agua más rápida del mercado. Adrenalina 100% pura.',
-            'imagen_url': 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=1200',
+            'imagen_url': '/images/fleet/seadoo_gtx.png',
             'estado': 'disponible',
             'incluye_capitan': False,
             'incluye_tripulacion': False,
@@ -147,7 +147,7 @@ def seed_all(db, Usuario, Embarcacion, Experiencia):
             'longitud': 12,
             'precio_dia': 350.00,
             'descripcion': 'Estabilidad y diversión aseguradas para ti y tus amigos en las calas.',
-            'imagen_url': 'https://images.unsplash.com/photo-1626297852194-a2f8c3a59e45?w=1200',
+            'imagen_url': '/images/fleet/yamaha_waverunner.png',
             'estado': 'disponible',
             'incluye_capitan': False,
             'incluye_tripulacion': False,
@@ -157,14 +157,20 @@ def seed_all(db, Usuario, Embarcacion, Experiencia):
     ]
     
     emb_added = 0
+    emb_updated = 0
     for data in vessels:
         exists = Embarcacion.query.filter_by(nombre=data['nombre']).first()
         if not exists:
             e = Embarcacion(**data)
             db.session.add(e)
             emb_added += 1
+        else:
+            # Auto-upgrade existing ones to local paths if they currently use unsplash
+            if not exists.imagen_url or 'unsplash' in str(exists.imagen_url).lower():
+                exists.imagen_url = data['imagen_url']
+                emb_updated += 1
     db.session.commit()
-    print(f"Embarcaciones añadidas: {emb_added}")
+    print(f"Embarcaciones añadidas: {emb_added}, actualizadas: {emb_updated}")
 
     # 4. Experiencias Premium
     exp_data = [
@@ -210,4 +216,20 @@ def seed_all(db, Usuario, Embarcacion, Experiencia):
     db.session.commit()
     print(f"Experiencias añadidas: {exp_added}")
     
-    return f"Éxito: {emb_added} barcos y {exp_added} experiencias añadidas correctamente a la nube."
+    # 5. Fallback Global Mapping for generic naming collisions
+    fuzzy_mappings = {
+        'barbossa': '/images/fleet/barbossa_turbo_jet.png',
+        'lucas': '/images/fleet/lucas_racer.png',
+    }
+    fuzzy_count = 0
+    all_vessels = Embarcacion.query.all()
+    for v in all_vessels:
+        if not v.imagen_url or 'unsplash' in str(v.imagen_url).lower():
+            for key, url in fuzzy_mappings.items():
+                if key in v.nombre.lower():
+                    v.imagen_url = url
+                    fuzzy_count += 1
+                    break
+    db.session.commit()
+
+    return f"Éxito: {emb_added} barcos nuevos, {emb_updated} actualizados, y {fuzzy_count} mapeos difusos completados."
