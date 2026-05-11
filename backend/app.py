@@ -32,7 +32,15 @@ for key in os.environ.keys():
     print(f"- {key}")
 
 # Obtener URL de base de datos (probando variables comunes en Railway)
-db_url = os.environ.get('DATABASE_URL') or os.environ.get('MYSQL_URL') or os.environ.get('MYSQLURL')
+raw_db_url = os.environ.get('DATABASE_URL')
+raw_mysql_url = os.environ.get('MYSQL_URL')
+
+if raw_db_url == "":
+    print("❌ CRÍTICO: DATABASE_URL existe en el entorno pero es una cadena VACÍA. Revisa tu referencia en Railway.")
+if raw_mysql_url == "":
+    print("❌ CRÍTICO: MYSQL_URL existe en el entorno pero es una cadena VACÍA.")
+
+db_url = raw_db_url or raw_mysql_url or os.environ.get('MYSQLURL')
 
 if not db_url:
     print("⚠️ ADVERTENCIA: No se encontró DATABASE_URL ni MYSQL_URL ni MYSQLURL en el entorno. Usando localhost por defecto.")
