@@ -1601,6 +1601,16 @@ def health_check():
     return jsonify({'status': 'ok', 'message': 'API funcionando correctamente'}), 200
 
 
+@app.route('/api/seed-database', methods=['GET'])
+def remote_seed_db():
+    """Ruta de utilidad para poblar la base de datos en Railway de forma segura"""
+    try:
+        from mega_seeder import seed_all
+        mensaje = seed_all()
+        return f"<h1>✅ Éxito</h1><p>{mensaje}</p>", 200
+    except Exception as e:
+        return f"<h1>❌ Error</h1><p>{str(e)}</p>", 500
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
