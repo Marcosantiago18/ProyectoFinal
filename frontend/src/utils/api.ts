@@ -1,6 +1,7 @@
 /**
  * Cliente API para comunicación con el backend
  * Centraliza todas las llamadas HTTP
+ * Re-trigger deploy for dns flush.
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
