@@ -1,7 +1,6 @@
-from app import db, Usuario, Embarcacion, Experiencia
 from datetime import datetime
 
-def seed_all():
+def seed_all(db, Usuario, Embarcacion, Experiencia):
     print("Iniciando mega-seeder en Railway...")
     
     # 1. Crear Admin por defecto si no existe

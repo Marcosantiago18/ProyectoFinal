@@ -1606,7 +1606,7 @@ def remote_seed_db():
     """Ruta de utilidad para poblar la base de datos en Railway de forma segura"""
     try:
         from mega_seeder import seed_all
-        mensaje = seed_all()
+        mensaje = seed_all(db, Usuario, Embarcacion, Experiencia)
         return f"<h1>✅ Éxito</h1><p>{mensaje}</p>", 200
     except Exception as e:
         return f"<h1>❌ Error</h1><p>{str(e)}</p>", 500
