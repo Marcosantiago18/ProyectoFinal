@@ -4,7 +4,7 @@ import { useAuth } from '../contex/AuthContext';
 import { useLanguage } from '../contex/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import type { DashboardStats, Embarcacion, Reserva, Mantenimiento, Amarre } from '../types';
-import { dashboardAPI, embarcacionesAPI, reservasAPI, mantenimientosAPI, amarresAPI } from '../utils/api';
+import { dashboardAPI, embarcacionesAPI, reservasAPI, mantenimientosAPI, amarresAPI, notificacionesAPI } from '../utils/api';
 import { toast } from 'sonner';
 import ChatInterface from '../components/chat/ChatInterface';
 import CustomSelect from '../components/shared/CustomSelect';
@@ -33,6 +33,41 @@ const Dashboard: React.FC = () => {
     const [rentModal, setRentModal] = useState<{ isOpen: boolean; amarreId: number | null }>({ isOpen: false, amarreId: null });
     const [rentMonths, setRentMonths] = useState(1);
     const [rentVesselId, setRentVesselId] = useState<number | ''>('');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; vessel: Embarcacion | null }>({ isOpen: false, vessel: null });
+    const [notifs, setNotifs] = useState<any>(null);
+    const [showNotifsDropdown, setShowNotifsDropdown] = useState(false);
+
+    useEffect(() => {
+        let interval: any;
+        const fetchNotifs = async () => {
+            if (usuario) {
+                try {
+                    const token = localStorage.getItem('token') || '';
+                    const res: any = await notificacionesAPI.get(usuario.id, token);
+                    setNotifs(res);
+                } catch (e) {
+                    console.error('Error fetching dashboard notifications', e);
+                }
+            }
+        };
+
+        fetchNotifs();
+        interval = setInterval(fetchNotifs, 15000);
+        
+        const handleSocketNotif = (data: any) => {
+            if (usuario && data.destinatario_id === usuario.id) {
+                fetchNotifs();
+            }
+        };
+        
+        socket.on('actualizar_notificaciones', handleSocketNotif);
+        
+        return () => {
+            clearInterval(interval);
+            socket.off('actualizar_notificaciones', handleSocketNotif);
+        };
+    }, [usuario]);
 
     useEffect(() => {
         if (!usuario || (usuario.rol !== 'admin' && usuario.rol !== 'capitan')) {
@@ -140,13 +175,14 @@ const Dashboard: React.FC = () => {
         }
     };
 
-    const handleDeleteVessel = async (id: number) => {
-        if (!window.confirm(t('confirm_delete') || 'Are you sure you want to delete this vessel?')) return;
+    const handleDeleteVessel = async () => {
+        if (!deleteModal.vessel) return;
 
         try {
             const token = localStorage.getItem('token') || '';
-            await embarcacionesAPI.delete(id, token);
+            await embarcacionesAPI.delete(deleteModal.vessel.id, token);
             toast.success(t('vessel_deleted') || 'Vessel deleted');
+            setDeleteModal({ isOpen: false, vessel: null });
             loadDashboardData();
         } catch (error) {
             console.error('Error deleting vessel:', error);
@@ -228,9 +264,16 @@ const Dashboard: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-[#0a1628] flex">
+        <div className="min-h-screen bg-[#0a1628] flex relative">
+            {/* Sidebar Overlay for Mobile */}
+            {isSidebarOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/60 z-40 lg:hidden" 
+                    onClick={() => setIsSidebarOpen(false)} 
+                />
+            )}
             {/* Sidebar */}
-            <aside className="w-64 bg-[#1a2942] border-r border-white/10 flex flex-col">
+            <aside className={`fixed inset-y-0 left-0 z-50 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 w-64 bg-[#1a2942] border-r border-white/10 flex flex-col transition-transform duration-300 ease-in-out`}>
                 {/* Logo */}
                 <div className="p-6 border-b border-white/10">
                     <div className="flex items-center gap-3">
@@ -247,7 +290,7 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 p-4">
+                <nav className="flex-1 p-4 overflow-y-auto">
                     <button
                         onClick={() => navigate('/')}
                         className="w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 text-white/60 hover:bg-white/5 transition-colors"
@@ -258,7 +301,7 @@ const Dashboard: React.FC = () => {
                         <span className="font-semibold">{t('nav_home')}</span>
                     </button>
                     <button
-                        onClick={() => setActiveTab('dashboard')}
+                        onClick={() => { setIsSidebarOpen(false); setActiveTab('dashboard'); }}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${activeTab === 'dashboard' ? 'bg-[#d4af37] text-[#0a1628]' : 'text-white/60 hover:bg-white/5'
                             }`}
                     >
@@ -269,7 +312,7 @@ const Dashboard: React.FC = () => {
                     </button>
 
                     <button
-                        onClick={() => setActiveTab('fleet')}
+                        onClick={() => { setIsSidebarOpen(false); setActiveTab('fleet'); }}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${activeTab === 'fleet' ? 'bg-[#d4af37] text-[#0a1628]' : 'text-white/60 hover:bg-white/5'
                             }`}
                     >
@@ -280,7 +323,7 @@ const Dashboard: React.FC = () => {
                     </button>
 
                     <button
-                        onClick={() => setActiveTab('bookings')}
+                        onClick={() => { setIsSidebarOpen(false); setActiveTab('bookings'); }}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${activeTab === 'bookings' ? 'bg-[#d4af37] text-[#0a1628]' : 'text-white/60 hover:bg-white/5'
                             }`}
                     >
@@ -291,7 +334,7 @@ const Dashboard: React.FC = () => {
                     </button>
 
                     <button
-                        onClick={() => setActiveTab('maintenance')}
+                        onClick={() => { setIsSidebarOpen(false); setActiveTab('maintenance'); }}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${activeTab === 'maintenance' ? 'bg-[#d4af37] text-[#0a1628]' : 'text-white/60 hover:bg-white/5'
                             }`}
                     >
@@ -303,7 +346,7 @@ const Dashboard: React.FC = () => {
                     </button>
 
                     <button
-                        onClick={() => setActiveTab('marina')}
+                        onClick={() => { setIsSidebarOpen(false); setActiveTab('marina'); }}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${activeTab === 'marina' ? 'bg-[#d4af37] text-[#0a1628]' : 'text-white/60 hover:bg-white/5'
                             }`}
                     >
@@ -314,7 +357,7 @@ const Dashboard: React.FC = () => {
                     </button>
 
                     <button
-                        onClick={() => setActiveTab('analytics')}
+                        onClick={() => { setIsSidebarOpen(false); setActiveTab('analytics'); }}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${activeTab === 'analytics' ? 'bg-[#d4af37] text-[#0a1628]' : 'text-white/60 hover:bg-white/5'
                             }`}
                     >
@@ -325,7 +368,7 @@ const Dashboard: React.FC = () => {
                     </button>
 
                     <button
-                        onClick={() => setActiveTab('messages')}
+                        onClick={() => { setIsSidebarOpen(false); setActiveTab('messages'); }}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${activeTab === 'messages' ? 'bg-[#d4af37] text-[#0a1628]' : 'text-white/60 hover:bg-white/5'
                             }`}
                     >
@@ -367,33 +410,101 @@ const Dashboard: React.FC = () => {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-auto">
+            <main className="flex-1 overflow-auto w-full pb-20 lg:pb-0 relative">
                 {/* Header */}
-                <header className="bg-[#1a2942] border-b border-white/10 p-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-2xl font-bold text-white mb-1">
-                                {t('welcome_back_captain') || 'Good Evening, Captain'}
-                            </h1>
-                            <p className="text-white/60">{t('dashboard_subtitle') || "Here's what's happening with your fleet today."}</p>
+                <header className="bg-[#1a2942] border-b border-white/10 p-4 lg:p-6 sticky top-0 z-30">
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <button 
+                                className="lg:hidden p-2 text-white/70 hover:text-white bg-white/5 rounded-lg" 
+                                onClick={() => setIsSidebarOpen(true)}
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/></svg>
+                            </button>
+                            <div className="hidden sm:block">
+                                <h1 className="text-xl lg:text-2xl font-bold text-white mb-1">
+                                    {t('welcome_back_captain') || 'Good Evening, Captain'}
+                                </h1>
+                                <p className="text-xs lg:text-sm text-white/60">{t('dashboard_subtitle') || "Here's what's happening with your fleet today."}</p>
+                            </div>
                         </div>
                         <div className="flex items-center gap-4">
-                            <div className="relative">
+                            <div className="relative hidden md:block">
                                 <input
                                     type="text"
                                     placeholder={t('search_placeholder') || "Search vessel, booking ID..."}
-                                    className="w-80 px-4 py-2 pl-10 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-500"
+                                    className="w-48 lg:w-80 px-4 py-2 pl-10 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-500 text-sm"
                                 />
                                 <svg className="w-5 h-5 text-white/40 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                 </svg>
                             </div>
-                            <button className="relative p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
-                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                </svg>
-                                <span className="absolute top-1 right-1 w-2 h-2 bg-[#ef4444] rounded-full"></span>
-                            </button>
+                            <div className="relative">
+                                <button 
+                                    onClick={() => setShowNotifsDropdown(!showNotifsDropdown)}
+                                    className="relative p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
+                                >
+                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                    </svg>
+                                    {notifs && notifs.total > 0 && (
+                                        <span className="absolute top-1 right-1 flex items-center justify-center w-4 h-4 bg-red-500 rounded-full text-[10px] font-bold text-white border-2 border-[#1a2942]">
+                                            {notifs.total}
+                                        </span>
+                                    )}
+                                </button>
+                                
+                                {showNotifsDropdown && (
+                                    <div className="absolute right-0 mt-2 w-80 bg-[#1a2942] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
+                                        <div className="p-4 border-b border-white/10 bg-white/5 flex justify-between items-center">
+                                            <h3 className="text-white font-bold text-sm">Notificaciones</h3>
+                                        </div>
+                                        <div className="max-h-80 overflow-y-auto">
+                                            {!notifs || notifs.total === 0 ? (
+                                                <div className="p-6 text-center text-white/50 text-sm">
+                                                    No tienes notificaciones nuevas
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col">
+                                                    {notifs.unread_mensajes > 0 && (
+                                                        <button onClick={() => { setActiveTab('messages'); setShowNotifsDropdown(false); }} className="flex items-center gap-3 p-4 hover:bg-white/5 transition-colors border-b border-white/5 text-left w-full">
+                                                            <div className="w-10 h-10 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center flex-shrink-0">
+                                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-white text-sm font-semibold">Mensajes Nuevos</p>
+                                                                <p className="text-white/60 text-xs mt-0.5">Tienes {notifs.unread_mensajes} {notifs.unread_mensajes === 1 ? 'mensaje sin leer' : 'mensajes sin leer'}.</p>
+                                                            </div>
+                                                        </button>
+                                                    )}
+                                                    {notifs.nuevas_reservas > 0 && (
+                                                        <button onClick={() => { setActiveTab('bookings'); setShowNotifsDropdown(false); }} className="flex items-center gap-3 p-4 hover:bg-white/5 transition-colors border-b border-white/5 text-left w-full">
+                                                            <div className="w-10 h-10 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center flex-shrink-0">
+                                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-white text-sm font-semibold">Nuevas Reservas</p>
+                                                                <p className="text-white/60 text-xs mt-0.5">Tienes {notifs.nuevas_reservas} {notifs.nuevas_reservas === 1 ? 'reserva pendiente' : 'reservas pendientes'}.</p>
+                                                            </div>
+                                                        </button>
+                                                    )}
+                                                    {notifs.mantenimientos > 0 && (
+                                                        <button onClick={() => { setActiveTab('maintenance'); setShowNotifsDropdown(false); }} className="flex items-center gap-3 p-4 hover:bg-white/5 transition-colors text-left w-full">
+                                                            <div className="w-10 h-10 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center flex-shrink-0">
+                                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-white text-sm font-semibold">Mantenimientos</p>
+                                                                <p className="text-white/60 text-xs mt-0.5">Tienes {notifs.mantenimientos} {notifs.mantenimientos === 1 ? 'alerta de mantenimiento' : 'alertas de mantenimiento'}.</p>
+                                                            </div>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </header>
@@ -491,7 +602,7 @@ const Dashboard: React.FC = () => {
                             <div className="glass-effect rounded-2xl p-6 mb-8">
                                 <div className="flex items-center justify-between mb-6">
                                     <h3 className="text-xl font-bold text-white">{t('fleet_status')}</h3>
-                                    <button onClick={() => setActiveTab('fleet')} className="text-[#d4af37] hover:text-[#f4d03f] transition-colors flex items-center gap-2">
+                                    <button onClick={() => { setIsSidebarOpen(false); setActiveTab('fleet'); }} className="text-[#d4af37] hover:text-[#f4d03f] transition-colors flex items-center gap-2">
                                         {t('view_all')}
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
@@ -499,8 +610,8 @@ const Dashboard: React.FC = () => {
                                     </button>
                                 </div>
 
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
+                                <div className="overflow-x-auto pb-4">
+                                    <table className="w-full min-w-[800px] hidden md:table">
                                         <thead>
                                             <tr className="border-b border-white/10">
                                                 <th className="text-left text-white/60 text-sm font-semibold pb-4 uppercase">{t('vessel_name')}</th>
@@ -613,7 +724,7 @@ const Dashboard: React.FC = () => {
                                         ))}
                                     </div>
                                     <button
-                                        onClick={() => setActiveTab('maintenance')}
+                                        onClick={() => { setIsSidebarOpen(false); setActiveTab('maintenance'); }}
                                         className="mt-3 text-sm text-orange-400 hover:text-orange-300 transition-colors"
                                     >
                                         {t('ver_todos_mantenimientos')} →
@@ -682,7 +793,7 @@ const Dashboard: React.FC = () => {
                                         {reservas.filter(r => r.estado === 'pendiente').length === 0 ? (
                                             <p className="text-white/60 text-sm italic">No hay solicitudes pendientes actuales.</p>
                                         ) : reservas.filter(r => r.estado === 'pendiente').map((req, i) => (
-                                            <div key={i} onClick={() => setActiveTab('bookings')} className="flex flex-col gap-3 p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer border-l-4 border-orange-400">
+                                            <div key={i} onClick={() => { setIsSidebarOpen(false); setActiveTab('bookings'); }} className="flex flex-col gap-3 p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer border-l-4 border-orange-400">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center flex-shrink-0">
                                                         <span className="text-white font-bold text-sm">RQ</span>
@@ -938,7 +1049,7 @@ const Dashboard: React.FC = () => {
                                                         {t('edit') || 'Edit'}
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDeleteVessel(embarcacion.id)}
+                                                        onClick={() => setDeleteModal({ isOpen: true, vessel: embarcacion })}
                                                         className="px-3 py-1 bg-red-500/20 text-red-500 rounded hover:bg-red-500/40 transition-colors text-sm font-semibold"
                                                     >
                                                         {t('delete') || 'Delete'}
@@ -955,8 +1066,8 @@ const Dashboard: React.FC = () => {
                     {activeTab === 'bookings' && (
                         <div className="glass-effect rounded-2xl p-6">
                             <h3 className="text-2xl font-bold text-white mb-6">{t('all_bookings')}</h3>
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
+                            <div className="overflow-x-auto pb-4">
+                                <table className="w-full min-w-[800px] hidden md:table">
                                     <thead>
                                         <tr className="border-b border-white/10">
                                             <th className="text-left text-white/60 text-sm font-semibold pb-4 uppercase">ID</th>
@@ -1567,6 +1678,73 @@ const Dashboard: React.FC = () => {
                         </div>
                     </div>
                 )}
+            
+            {/* Mobile Bottom Navigation Bar (App-like UX) */}
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#0a1628]/80 backdrop-blur-xl border-t border-white/10 z-[60] pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+                <div className="flex justify-around items-center px-2 py-3">
+                    <button onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'dashboard' ? 'text-[#d4af37] scale-110' : 'text-white/50 hover:text-white/80'}`}>
+                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" /></svg>
+                        <span className="text-[10px] font-medium tracking-wide">Inicio</span>
+                    </button>
+                    <button onClick={() => { setActiveTab('fleet'); setIsSidebarOpen(false); }} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'fleet' ? 'text-[#d4af37] scale-110' : 'text-white/50 hover:text-white/80'}`}>
+                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M20 21c-1.39 0-2.78-.47-4-1.32-2.44 1.71-5.56 1.71-8 0C6.78 20.53 5.39 21 4 21H2v-2h2c1.38 0 2.74-.35 4-.99 2.52 1.29 5.48 1.29 8 0 1.26.65 2.62.99 4 .99h2v2h-2z" /></svg>
+                        <span className="text-[10px] font-medium tracking-wide">Flota</span>
+                    </button>
+                    <button onClick={() => { setActiveTab('bookings'); setIsSidebarOpen(false); }} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'bookings' ? 'text-[#d4af37] scale-110' : 'text-white/50 hover:text-white/80'}`}>
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        <span className="text-[10px] font-medium tracking-wide">Reservas</span>
+                    </button>
+                    <button onClick={() => { setActiveTab('messages'); setIsSidebarOpen(false); }} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'messages' ? 'text-[#d4af37] scale-110' : 'text-white/50 hover:text-white/80'}`}>
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                        <span className="text-[10px] font-medium tracking-wide">Mensajes</span>
+                    </button>
+                    <button onClick={() => setIsSidebarOpen(true)} className="flex flex-col items-center gap-1 text-white/50 hover:text-white/80 transition-all">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/></svg>
+                        <span className="text-[10px] font-medium tracking-wide">Más</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* Delete Confirmation Modal */}
+            {deleteModal.isOpen && deleteModal.vessel && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+                    <div className="bg-[#1a2942] rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-500"></div>
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-white">Eliminar Embarcación</h3>
+                                <p className="text-white/60 text-sm">{deleteModal.vessel.nombre}</p>
+                            </div>
+                        </div>
+                        <p className="text-white/80 mb-8">
+                            {t('confirm_delete') || '¿Estás seguro de que deseas eliminar esta embarcación? Esta acción no se puede deshacer y eliminará también las reservas y mantenimientos asociados.'}
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => setDeleteModal({ isOpen: false, vessel: null })}
+                                className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-lg font-semibold transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleDeleteVessel}
+                                className="px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors flex items-center gap-2"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             </main>
         </div>
     );

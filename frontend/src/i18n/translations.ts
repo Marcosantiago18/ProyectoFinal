@@ -95,7 +95,7 @@ export const translations = {
         newsletter_desc: 'Suscríbete para ofertas exclusivas y nuevas llegadas a la flota.',
         email_placeholder: 'Dirección de correo',
         join: 'Unirse',
-        copyright: '© 2026 Nautica Luxury Rentals. Todos los derechos reservados.',
+        copyright: '© 2026 SeaHive Charter. Todos los derechos reservados.',
 
         // Search Results
         search_results_title: 'Resultados de Búsqueda',
@@ -389,7 +389,7 @@ export const translations = {
         newsletter_desc: 'Subscribe for exclusive offers and new fleet arrivals.',
         email_placeholder: 'Email address',
         join: 'Join',
-        copyright: '© 2026 Nautica Luxury Rentals. All rights reserved.',
+        copyright: '© 2026 SeaHive Charter. All rights reserved.',
 
         // Search Results
         search_results_title: 'Search Results',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { Embarcacion } from '../types';
-import { embarcacionesAPI, reservasAPI, reviewsAPI, favoritosAPI } from '../utils/api';
+import { embarcacionesAPI, reservasAPI, reviewsAPI, favoritosAPI, mensajesAPI } from '../utils/api';
 import { useAuth } from '../contex/AuthContext';
 import { useLanguage } from '../contex/LanguageContext';
 import Navbar from '../components/shared/Navbar';
@@ -39,6 +39,11 @@ const VesselDetail: React.FC = () => {
     const [favoriteId, setFavoriteId] = useState<number | null>(null);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [selectedExpIds, setSelectedExpIds] = useState<number[]>([]);
+
+    const [contactModalOpen, setContactModalOpen] = useState(false);
+    const [messageContent, setMessageContent] = useState('');
+    const [isSendingMessage, setIsSendingMessage] = useState(false);
+
 
     const [bookingData, setBookingData] = useState({
         fecha_inicio: '',
@@ -187,6 +192,36 @@ const VesselDetail: React.FC = () => {
             toast.error(error.message || 'Error con favoritos');
         }
     };
+
+    const handleContactCaptain = async () => {
+        if (!isAuthenticated || !usuario) {
+            toast.error('Debes iniciar sesión para enviar mensajes');
+            navigate('/login');
+            return;
+        }
+        if (!messageContent.trim()) {
+            toast.error('El mensaje no puede estar vacío');
+            return;
+        }
+
+        setIsSendingMessage(true);
+        try {
+            const token = localStorage.getItem('token') || '';
+            await mensajesAPI.sendMensaje({
+                remitente_id: usuario.id,
+                destinatario_id: embarcacion?.propietario_id || 0,
+                contenido: messageContent
+            }, token);
+            toast.success('Mensaje enviado al propietario');
+            setContactModalOpen(false);
+            setMessageContent('');
+        } catch (error: any) {
+            toast.error(error.message || 'Error al enviar el mensaje');
+        } finally {
+            setIsSendingMessage(false);
+        }
+    };
+
 
     const handleSubmitReview = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -342,11 +377,20 @@ const VesselDetail: React.FC = () => {
                                             </svg>
                                         </button>
                                     </div>
-                                    {embarcacion.propietario_nombre && (
-                                        <p className="text-[#d4af37] text-sm font-semibold mb-3 flex items-center gap-1">
-                                            <span className="material-icons text-sm">verified</span> Propietario: {embarcacion.propietario_nombre}
-                                        </p>
-                                    )}
+                                    <div className="flex items-center flex-wrap gap-4 mb-4">
+                                        {embarcacion.propietario_nombre && (
+                                            <p className="text-[#d4af37] text-sm font-semibold flex items-center gap-1">
+                                                <span className="material-icons text-sm">verified</span> Propietario: {embarcacion.propietario_nombre}
+                                            </p>
+                                        )}
+                                        <button 
+                                            onClick={() => setContactModalOpen(true)}
+                                            className="text-xs px-4 py-1.5 bg-[#d4af37]/10 text-[#d4af37] border border-[#d4af37]/30 rounded-full hover:bg-[#d4af37]/20 transition-all flex items-center gap-2 font-medium"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                                            Contactar Propietario
+                                        </button>
+                                    </div>
                                     <div className="flex items-center gap-4 text-white/60">
                                         <span className="flex items-center gap-2">
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -772,6 +816,50 @@ const VesselDetail: React.FC = () => {
                 </div>
             </div>
             <Footer />
+            
+            {/* Contact Captain Modal */}
+            {contactModalOpen && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+                    <div className="bg-[#1a2942] rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#d4af37] to-amber-300"></div>
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <svg className="w-5 h-5 text-[#d4af37]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                                Mensaje al Propietario
+                            </h3>
+                            <button onClick={() => setContactModalOpen(false)} className="text-white/50 hover:text-white transition-colors">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+                        <div className="mb-6">
+                            <p className="text-white/60 text-sm mb-3">Escribe tu consulta para el propietario de <strong>{embarcacion?.nombre}</strong>:</p>
+                            <textarea
+                                value={messageContent}
+                                onChange={(e) => setMessageContent(e.target.value)}
+                                placeholder="Hola, me gustaría saber si..."
+                                className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white placeholder-white/30 focus:border-[#d4af37] focus:outline-none focus:ring-1 focus:ring-[#d4af37] transition-all min-h-[120px] resize-y"
+                            />
+                        </div>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => setContactModalOpen(false)}
+                                className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-lg font-semibold transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleContactCaptain}
+                                disabled={isSendingMessage || !messageContent.trim()}
+                                className="px-5 py-2.5 bg-[#d4af37] hover:bg-[#f4d03f] text-[#0a1628] rounded-lg font-bold transition-colors disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {isSendingMessage ? 'Enviando...' : 'Enviar Mensaje'}
+                                {!isSendingMessage && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {embarcacion && (
                 <PaymentModal
                     isOpen={isPaymentModalOpen}

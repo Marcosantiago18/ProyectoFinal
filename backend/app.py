@@ -28,6 +28,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'mysql+py
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.urandom(24)
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50 MB
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Configuración Stripe
@@ -729,6 +730,9 @@ def create_reserva():
         db.session.add(reserva)
         db.session.commit()
         
+        if embarcacion.propietario_id:
+            socketio.emit('actualizar_notificaciones', {'destinatario_id': embarcacion.propietario_id})
+        
         return jsonify({
             'message': 'Reserva creada exitosamente',
             'reserva': reserva.to_dict()
@@ -1204,6 +1208,11 @@ def send_mensaje():
         destinatario_id = data.get('destinatario_id')
         contenido = data.get('contenido')
         
+        if not destinatario_id:
+            admin = Usuario.query.filter_by(rol='admin').first()
+            if admin:
+                destinatario_id = admin.id
+
         if not remitente_id or not destinatario_id or not contenido:
             return jsonify({'error': 'Faltan datos obligatorios'}), 400
             
@@ -1214,9 +1223,54 @@ def send_mensaje():
         )
         db.session.add(mensaje)
         db.session.commit()
+        
+        socketio.emit('actualizar_notificaciones', {'destinatario_id': destinatario_id})
         return jsonify({'message': 'Mensaje enviado', 'mensaje': mensaje.to_dict()}), 201
     except Exception as e:
         db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/notificaciones', methods=['GET'])
+@token_required
+def get_notificaciones():
+    """Obtener conteo de notificaciones y alertas para el dashboard/navbar"""
+    try:
+        usuario_id = request.args.get('usuario_id')
+        if not usuario_id:
+            return jsonify({'error': 'usuario_id requerido'}), 400
+            
+        current_user = Usuario.query.get(int(usuario_id))
+        if not current_user:
+            return jsonify({'error': 'Usuario no encontrado'}), 404
+
+        # 1. Unread messages
+        unread_mensajes = Mensaje.query.filter_by(destinatario_id=current_user.id, leido=False).count()
+        
+        # 2. Reservas pendientes (solo capitan/admin)
+        nuevas_reservas = 0
+        if current_user.rol == 'admin':
+            nuevas_reservas = Reserva.query.filter_by(estado='pendiente').count()
+        elif current_user.rol == 'capitan':
+            # Reservas de embarcaciones del capitan
+            embarcaciones_ids = [e.id for e in Embarcacion.query.filter_by(propietario_id=current_user.id).all()]
+            if embarcaciones_ids:
+                nuevas_reservas = Reserva.query.filter(
+                    Reserva.embarcacion_id.in_(embarcaciones_ids),
+                    Reserva.estado == 'pendiente'
+                ).count()
+                
+        # 3. Mantenimientos programados (solo admin)
+        mantenimientos = 0
+        if current_user.rol == 'admin':
+            mantenimientos = Mantenimiento.query.filter_by(estado='programado').count()
+            
+        return jsonify({
+            'unread_mensajes': unread_mensajes,
+            'nuevas_reservas': nuevas_reservas,
+            'mantenimientos': mantenimientos,
+            'total': unread_mensajes + nuevas_reservas + mantenimientos
+        }), 200
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
@@ -1298,10 +1352,10 @@ def generar_factura_pdf(reserva_id: int):
     try:
         reserva = Reserva.query.get_or_404(reserva_id)
         usuario = Usuario.query.get(reserva.usuario_id)
-        embarcacion = Embarcacion.query.get(reserva.embarcacion_id)
+        embarcacion = Embarcacion.query.get(reserva.embarcacion_id) if reserva.embarcacion_id else None
 
-        if not usuario or not embarcacion:
-            return jsonify(error='Datos de reserva incompletos'), 404
+        if not usuario:
+            return jsonify(error='Datos de usuario incompletos'), 404
 
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
@@ -1378,14 +1432,23 @@ def generar_factura_pdf(reserva_id: int):
         elements.append(Spacer(1, 0.3*cm))
 
         dias = max(1, (reserva.fecha_fin - reserva.fecha_inicio).days)
-        precio_dia = embarcacion.precio_dia or 0
-        subtotal = dias * precio_dia
-        iva = round(subtotal * 0.21, 2)
-        total = round(subtotal + iva, 2)
+        
+        total = reserva.precio_total
+        subtotal = round(total / 1.21, 2)
+        iva = round(total - subtotal, 2)
+        
+        if embarcacion:
+            desc_servicio = f'Alquiler: {embarcacion.nombre}\n({embarcacion.tipo.capitalize()} • {embarcacion.longitud}m)'
+            precio_unitario = f'€{(embarcacion.precio_dia or 0):,.2f}/día'
+            cantidad = f'{dias} días'
+        else:
+            desc_servicio = 'Experiencia Independiente\n(Paquete Personalizado)'
+            precio_unitario = '—'
+            cantidad = '1 servicio'
 
         service_data = [
-            ['Descripción', 'Cantidad', 'Precio/Día', 'Importe'],
-            [f'Alquiler: {embarcacion.nombre}\n({embarcacion.tipo.capitalize()} • {embarcacion.longitud}m)', f'{dias} días', f'€{precio_dia:,.2f}', f'€{subtotal:,.2f}'],
+            ['Descripción', 'Cantidad', 'Tarifa Base', 'Importe'],
+            [desc_servicio, cantidad, precio_unitario, f'€{subtotal:,.2f}'],
             ['', '', 'Subtotal:', f'€{subtotal:,.2f}'],
             ['', '', 'IVA (21%):', f'€{iva:,.2f}'],
             ['', '', 'TOTAL:', f'€{total:,.2f}'],
@@ -1419,10 +1482,21 @@ def generar_factura_pdf(reserva_id: int):
         # --- FECHAS ---
         elements.append(Paragraph('Detalles de la Reserva', section_style))
         elements.append(Spacer(1, 0.3*cm))
+        if embarcacion:
+            embarcacion_nombre = embarcacion.nombre
+            embarcacion_tipo = embarcacion.tipo.capitalize()
+            ubicacion = embarcacion.ubicacion or '—'
+            capacidad = f'{embarcacion.capacidad} personas'
+        else:
+            embarcacion_nombre = 'Experiencia Independiente'
+            embarcacion_tipo = 'Experiencia'
+            ubicacion = 'Varios'
+            capacidad = 'Según experiencia'
+
         booking_data = [
-            ['Embarcación:', embarcacion.nombre, 'Tipo:', embarcacion.tipo.capitalize()],
+            ['Embarcación:', embarcacion_nombre, 'Tipo:', embarcacion_tipo],
             ['Fecha inicio:', reserva.fecha_inicio.strftime('%d/%m/%Y %H:%M'), 'Fecha fin:', reserva.fecha_fin.strftime('%d/%m/%Y %H:%M')],
-            ['Ubicación:', embarcacion.ubicacion or '—', 'Capacidad:', f'{embarcacion.capacidad} personas'],
+            ['Ubicación:', ubicacion, 'Capacidad:', capacidad],
             ['Tipo evento:', reserva.tipo_evento or 'Alquiler estándar', 'Notas:', reserva.notas or '—'],
         ]
         booking_table = Table(booking_data, colWidths=[3.5*cm, 5*cm, 3.5*cm, 5*cm])

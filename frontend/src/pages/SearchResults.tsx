@@ -123,6 +123,7 @@ const SearchResults: React.FC = () => {
                                     <div className="grid grid-cols-2 gap-2">
                                         <input
                                             type="number"
+                                            min="0"
                                             value={filters.precioMin}
                                             onChange={(e) => handleFilterChange('precioMin', e.target.value)}
                                             placeholder={t('min_price_placeholder')}
@@ -130,6 +131,7 @@ const SearchResults: React.FC = () => {
                                         />
                                         <input
                                             type="number"
+                                            min="0"
                                             value={filters.precioMax}
                                             onChange={(e) => handleFilterChange('precioMax', e.target.value)}
                                             placeholder={t('max_price_placeholder')}
@@ -143,6 +145,7 @@ const SearchResults: React.FC = () => {
                                     <label className="block text-white/80 text-sm mb-2">{t('min_capacity_label')}</label>
                                     <input
                                         type="number"
+                                        min="0"
                                         value={filters.capacidadMin}
                                         onChange={(e) => handleFilterChange('capacidadMin', e.target.value)}
                                         placeholder={t('guests_placeholder')}

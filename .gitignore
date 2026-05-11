@@ -26,3 +26,8 @@ __pycache__/
 .idea/
 *.swp
 *.swo
+
+# Artifacts & Generated Docs
+*.pdf
+NotebookLM_docs/
+generate_documentation.py

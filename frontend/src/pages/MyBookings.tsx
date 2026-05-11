@@ -99,7 +99,7 @@ const MyBookings: React.FC = () => {
                 </head>
                 <body>
                     <div class="header">
-                        <h1>NAUTICA ELITE FLEET</h1>
+                        <h1>SEAHIVE CHARTER</h1>
                         <h2>Factura Comercial</h2>
                     </div>
                     <div class="details">
@@ -114,7 +114,7 @@ const MyBookings: React.FC = () => {
                         <div class="total">Total a pagar: $${reserva.precio_total.toLocaleString()}</div>
                     </div>
                     <div class="footer">
-                        <p>Gracias por confiar en Nautica Elite Fleet. Este documento es una factura válida.</p>
+                        <p>Gracias por confiar en SeaHive Charter. Este documento es una factura válida.</p>
                     </div>
                     <script>
                         window.onload = function() { window.print(); window.close(); }

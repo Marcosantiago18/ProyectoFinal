@@ -201,6 +201,13 @@ export const amarresAPI = {
     },
 };
 
+// ==================== NOTIFICACIONES ====================
+export const notificacionesAPI = {
+    get: async (usuario_id: number, token: string) => {
+        return fetchAPI(`/notificaciones?usuario_id=${usuario_id}`, { token });
+    }
+};
+
 // ==================== MENSAJES ====================
 
 export const mensajesAPI = {

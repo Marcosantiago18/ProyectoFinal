@@ -61,7 +61,7 @@ const Hero: React.FC = () => {
                 </h1>
 
                 {/* Search Widget */}
-                <div className="w-full max-w-5xl bg-navy-deep/80 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] rounded-full p-2 gold-border-glow transition-all duration-300">
+                <div className="w-full max-w-5xl bg-navy-deep/80 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] rounded-3xl md:rounded-full p-2 gold-border-glow transition-all duration-300">
                     <form onSubmit={handleSearch} className="flex flex-col md:flex-row items-center w-full">
                         {/* Location */}
                         <div className="relative flex-1 w-full px-6 py-4 border-b md:border-b-0 md:border-r border-white/10 group hover:bg-white/5 transition-colors duration-300 md:rounded-l-full overflow-hidden cursor-text" onClick={() => document.getElementById('search-location')?.focus()}>
@@ -166,7 +166,7 @@ const Hero: React.FC = () => {
                         <div className="p-2 w-full md:w-auto mt-2 md:mt-0">
                             <button
                                 type="submit"
-                                className="w-full md:w-20 md:h-20 rounded-full bg-linear-to-tr from-primary-dark to-primary hover:from-primary hover:to-blue-accent text-white flex items-center justify-center shadow-[0_0_20px_rgba(15,73,189,0.5)] transition-all transform hover:scale-105"
+                                className="w-full md:w-20 py-4 md:py-0 md:h-20 rounded-full bg-linear-to-tr from-primary-dark to-primary hover:from-primary hover:to-blue-accent text-white flex items-center justify-center shadow-[0_0_20px_rgba(15,73,189,0.5)] transition-all transform hover:scale-105"
                             >
                                 <span className="material-icons text-3xl">search</span>
                             </button>

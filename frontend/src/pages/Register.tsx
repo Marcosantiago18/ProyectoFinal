@@ -69,12 +69,8 @@ const Register: React.FC = () => {
                 {/* Logo */}
                 <div className="text-center mb-8">
                     <Link to="/" className="inline-flex items-center gap-3 mb-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-[#d4af37] to-[#f4d03f] rounded-lg flex items-center justify-center">
-                            <svg className="w-7 h-7 text-[#0a1628]" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M20 21c-1.39 0-2.78-.47-4-1.32-2.44 1.71-5.56 1.71-8 0C6.78 20.53 5.39 21 4 21H2v-2h2c1.38 0 2.74-.35 4-.99 2.52 1.29 5.48 1.29 8 0 1.26.65 2.62.99 4 .99h2v2h-2z" />
-                            </svg>
-                        </div>
-                        <span className="text-2xl font-bold text-white">NAUTICA</span>
+                        <img src="/images/seahive_logo.png" alt="SeaHive" className="w-12 h-12 rounded-full" />
+                        <span className="text-2xl font-bold text-white">SEAHIVE</span>
                     </Link>
                     <h2 className="text-3xl font-bold text-white mb-2">{t('register_title')}</h2>
                     <p className="text-white/60">{t('register_subtitle')}</p>
