@@ -510,7 +510,8 @@ def create_embarcacion():
                 file.save(file_path)
                 
                 # Construct URL
-                imagen_url = f"http://localhost:5000/static/uploads/{filename}"
+                # Usar ruta relativa raíz para que funcione tras proxy inverso
+                imagen_url = f"/static/uploads/{filename}"
                 print(f"Image URL: {imagen_url}")
 
         embarcacion = Embarcacion(
@@ -570,7 +571,8 @@ def update_embarcacion(id: int):
                 file.save(file_path)
                 
                 # Update image URL
-                embarcacion.imagen_url = f"http://localhost:5000/static/uploads/{filename}"
+                # Usar ruta relativa raíz para que funcione tras proxy inverso
+                embarcacion.imagen_url = f"/static/uploads/{filename}"
 
         # Update other fields
         # Data types need to be handled carefully when coming from FormData (they are all strings)
