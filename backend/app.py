@@ -1574,7 +1574,7 @@ if __name__ == '__main__':
                     )
                     db.session.add(amarre)
         db.session.commit()
-            print(f"{24} amarres creados automáticamente")
+        print(f"{24} amarres creados automáticamente")
 
     port = int(os.environ.get("PORT", 5000))
     # Desactivar debug mode en producción para mayor seguridad
