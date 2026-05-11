@@ -1580,6 +1580,19 @@ def generar_factura_pdf(reserva_id: int):
 
 # ==================== INICIALIZACIÓN ====================
 
+@app.route('/', methods=['GET'])
+def index():
+    """Ruta de bienvenida para verificar que el servidor está online"""
+    return """
+    <div style="font-family: system-ui, sans-serif; text-align: center; padding: 50px; color: #1e293b;">
+        <h1 style="color: #0284c7; font-size: 48px; margin-bottom: 10px;">🚀 Backend Online</h1>
+        <p style="font-size: 18px; color: #64748b;">El servidor Flask de SeaHive está corriendo exitosamente en Railway.</p>
+        <div style="margin-top: 30px; display: inline-block; background: #f1f5f9; padding: 15px 30px; border-radius: 10px;">
+            <code>Estado: Conectado a la base de datos ✅</code>
+        </div>
+    </div>
+    """, 200
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Verificar estado del servidor"""
