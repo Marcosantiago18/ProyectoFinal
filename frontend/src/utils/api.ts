@@ -284,3 +284,13 @@ export const experienciasAPI = {
         });
     }
 };
+
+// ==================== PAGOS (STRIPE) ====================
+export const pagosAPI = {
+    createIntent: async (data: { amount: number }) => {
+        return fetchAPI<{ clientSecret: string }>('/pagos/create-intent', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+};

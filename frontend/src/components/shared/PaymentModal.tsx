@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { pagosAPI } from '../../utils/api';
 
 // Reemplazar con la clave pública de test proporcionada
 const stripePromise = loadStripe('pk_test_51TDqhiA5eiO95UcZrTjF1VVQxw7zVfYLU7vhbHasY1g5kr6Ly6RJPthQmjrM8vGNVDynO5eLU2TbQQVGIBBOEC6500bMzZzR2i');
@@ -105,12 +106,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onSuccess,
 
     useEffect(() => {
         if (isOpen && amount > 0) {
-            fetch('http://127.0.0.1:5000/api/pagos/create-intent', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ amount }),
-            })
-            .then((res) => res.json())
+            pagosAPI.createIntent({ amount })
             .then((data) => setClientSecret(data.clientSecret))
             .catch((err) => console.error('Error fetching secret:', err));
         }
