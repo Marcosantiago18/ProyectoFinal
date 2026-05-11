@@ -22,5 +22,9 @@ COPY nginx.conf.template /etc/nginx/conf.d/nginx.conf.template
 # Copiar los assets de la etapa de construcción anterior
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Comando de inicio: reemplaza la variable de entorno del host y el puerto en runtime, y arranca Nginx
-CMD sh -c "sed -e 's/BACKEND_HOST_PLACEHOLDER/'\"${BACKEND_HOST}\"'/g' -e 's/listen 80;/listen '\"${PORT:-80}\"';/g' /etc/nginx/conf.d/nginx.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
+# Copiar el script de arranque y darle permisos
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Usar el script como punto de entrada
+ENTRYPOINT ["/entrypoint.sh"]
