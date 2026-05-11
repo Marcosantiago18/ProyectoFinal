@@ -31,25 +31,30 @@ for key in os.environ.keys():
     # Evitar imprimir contraseñas en los nombres si existieran, solo imprimir clave
     print(f"- {key}")
 
-# Obtener URL de base de datos (probando variables comunes en Railway)
-raw_db_url = os.environ.get('DATABASE_URL')
-raw_mysql_url = os.environ.get('MYSQL_URL')
+# Búsqueda ROBUSTA de variables de entorno (Ignora mayúsculas/minúsculas y espacios accidentales en las claves)
+db_url = None
+matched_key = None
 
-if raw_db_url == "":
-    print("❌ CRÍTICO: DATABASE_URL existe en el entorno pero es una cadena VACÍA. Revisa tu referencia en Railway.")
-if raw_mysql_url == "":
-    print("❌ CRÍTICO: MYSQL_URL existe en el entorno pero es una cadena VACÍA.")
-
-db_url = raw_db_url or raw_mysql_url or os.environ.get('MYSQLURL')
+print("🔎 Analizando variables del sistema para conexión...")
+for key, value in os.environ.items():
+    clean_key = key.strip().upper()
+    if clean_key in ['DATABASE_URL', 'MYSQL_URL', 'MYSQLURL']:
+        if value and str(value).strip():
+            db_url = str(value).strip()
+            matched_key = key
+            print(f"🎯 ¡Encontrada variable de conexión! Clave: '{key}'")
+            break
+        else:
+            print(f"⚠️ Detectada la clave '{key}', pero su contenido está vacío o son solo espacios.")
 
 if not db_url:
-    print("⚠️ ADVERTENCIA: No se encontró DATABASE_URL ni MYSQL_URL ni MYSQLURL en el entorno. Usando localhost por defecto.")
+    print("⚠️ ADVERTENCIA: No se encontró ninguna URL válida. Usando localhost como fallback.")
     db_url = 'mysql+pymysql://root@localhost/alquiler_barcos'
 else:
     from urllib.parse import urlparse
     try:
         parsed = urlparse(db_url)
-        print(f"✅ Conectando a base de datos en host: {parsed.hostname}")
+        print(f"✅ Conexión detectada a base de datos en host: {parsed.hostname}")
     except:
         print("✅ Conectando a base de datos proporcionada en el entorno.")
 
