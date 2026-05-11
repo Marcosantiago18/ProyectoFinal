@@ -1,4 +1,5 @@
 #!/bin/sh
+# Forzar reconstrucción total en Railway - Hash: 9922
 set -e
 
 echo "🚀 Configurando Nginx para escuchar en puerto: ${PORT:-80}"
