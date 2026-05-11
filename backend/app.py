@@ -24,8 +24,23 @@ load_dotenv()
 
 # Configuración de la aplicación
 app = Flask(__name__)
-db_url = os.environ.get('DATABASE_URL', 'mysql+pymysql://root@localhost/alquiler_barcos')
-# Normalizar URL de Railway (asegurar el driver pymysql)
+
+# Obtener URL de base de datos (probando variables comunes en Railway)
+db_url = os.environ.get('DATABASE_URL') or os.environ.get('MYSQL_URL') or os.environ.get('MYSQLURL')
+
+if not db_url:
+    print("⚠️ ADVERTENCIA: No se encontró DATABASE_URL ni MYSQL_URL en el entorno. Usando localhost por defecto.")
+    db_url = 'mysql+pymysql://root@localhost/alquiler_barcos'
+else:
+    # Intentar extraer host para debug seguro
+    from urllib.parse import urlparse
+    try:
+        parsed = urlparse(db_url)
+        print(f"✅ Conectando a base de datos en host: {parsed.hostname}")
+    except:
+        print("✅ Conectando a base de datos proporcionada en el entorno.")
+
+# Normalizar URL (asegurar el driver pymysql)
 if db_url.startswith("mysql://"):
     db_url = db_url.replace("mysql://", "mysql+pymysql://", 1)
 
