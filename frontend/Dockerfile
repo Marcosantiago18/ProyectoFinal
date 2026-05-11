@@ -16,7 +16,10 @@ RUN npm run build
 # Etapa 2: Nginx para servir la aplicación
 FROM nginx:alpine
 
-# Copiar el template de configuración
+# Copiar la configuración principal de Nginx (forzando 1 solo worker process)
+COPY nginx_main.conf /etc/nginx/nginx.conf
+
+# Copiar el template de configuración secundaria (sitio default)
 COPY nginx.conf.template /etc/nginx/conf.d/nginx.conf.template
 
 # Copiar los assets de la etapa de construcción anterior
