@@ -17,4 +17,4 @@ COPY . .
 
 EXPOSE 5000
 
-CMD ["sh", "-c", "python bot.py & python app.py"]
+CMD ["python", "app.py"]

@@ -1644,7 +1644,7 @@ if __name__ == '__main__':
 
     port = int(os.environ.get("PORT", 5000))
     # Desactivar debug mode en producción para mayor seguridad
-    debug_mode = os.environ.get("FLASK_ENV", "development") == "development"
+    debug_mode = os.environ.get("FLASK_ENV", "production") == "development"
     
     print(f"🚀 Iniciando servidor en puerto {port}...")
     socketio.run(app, host='0.0.0.0', debug=debug_mode, port=port, allow_unsafe_werkzeug=True)
