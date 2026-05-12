@@ -349,8 +349,9 @@ frontend/src/
 - **Modo oscuro premium** con paleta de colores corporativa (dorado `#d4af37`, azul `#4a90e2`, fondo `#0a1628`).
 - **Glassmorphism** en la barra de navegación y tarjetas.
 - **Animaciones CSS** y transiciones suaves en hover y scroll.
-- **Diseño responsive** adaptado a móvil, tablet y escritorio.
+- **Diseño responsive e inteligente** adaptado a móvil, tablet y escritorio. Se han rediseñado componentes clave para móviles (Mobile-First): las tablas de datos complejas mutan automáticamente a un diseño de tarjetas flotantes navegables y el sistema de chat adopta un flujo modal tipo aplicación nativa para optimizar el espacio vertical.
 - **Iconos Material Icons** y SVG personalizados para redes sociales.
+- **Assets estáticos optimizados:** La flota utiliza una biblioteca de imágenes local optimizada (`/images/fleet/`) eliminando la dependencia de servicios externos de terceros para una carga instantánea.
 
 **Pantallas principales:**
 - **Home:** Hero section con buscador, flota destacada y sección "About".
@@ -380,6 +381,9 @@ La infraestructura se define en un fichero `docker-compose.yml` que orquesta 4 s
 4. **bot** (Python 3.10-slim): Bot de Telegram independiente.
 
 El frontend utiliza una compilación multietapa: primero se construye la aplicación con Node.js (`npm run build`) y luego se sirve el resultado estático con Nginx, lo que resulta en una imagen final muy ligera.
+
+**Despliegue en la Nube (Producción):**
+Adicionalmente al entorno local Docker, se ha implementado un pipeline de integración y despliegue continuo (CI/CD) en **Railway Cloud**. La infraestructura en la nube replica la arquitectura de microservicios conectando los contenedores a través de una red privada virtual securizada, con un proxy inverso Nginx configurado dinámicamente para gestionar las peticiones entrantes y el tráfico de WebSockets.
 
 ### 2.7 Control de versiones y entorno de desarrollo
 
