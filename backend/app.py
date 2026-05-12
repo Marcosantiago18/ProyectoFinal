@@ -1642,7 +1642,7 @@ if __name__ == '__main__':
         db.session.commit()
         print(f"{24} amarres creados automáticamente")
 
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 8080))
     # Desactivar debug mode en producción para mayor seguridad
     debug_mode = os.environ.get("FLASK_ENV", "production") == "development"
     
